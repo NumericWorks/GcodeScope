@@ -17,12 +17,10 @@ NumericWorks'ün ücretsiz, tarayıcıda çalışan G-code görüntüleyicisi. T
 ## Yapılandırma (`index.html` en altı)
 ```js
 window.GS_CONFIG = {
-  gaMeasurementId: '',  // Google Analytics 4, ör. G-XXXXXXXXXX
   cfAnalyticsToken: ''   // Cloudflare Web Analytics token
 };
 ```
-- **Google Analytics:** ID girilirse standart gtag.js yüklenir (sayfa görüntüleme). GA çerez kullanır.
-- **Cloudflare Web Analytics:** token girilirse beacon yüklenir (çerezsiz). Özel olay saymaz; sadece sayfa görüntülemesi.
+- **Cloudflare Web Analytics:** token girilirse beacon yüklenir (çerezsiz, onay çubuğu gerekmez). Paneldeki site: `numericworks.github.io`. Özel olay saymaz; sadece sayfa görüntülemesi.
 - E-posta toplama yok; üst barda ve sayfada "iOS · Android — yakında" rozeti var.
 
 ## Yerelde çalıştırma

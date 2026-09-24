@@ -286,18 +286,8 @@ document.querySelectorAll('[data-sample]').forEach((b) => b.addEventListener('cl
   } catch (err) { showError(t('errParse') + err.message); }
 }));
 
-// ---------------------------------------------------------------- analytics
-if (CFG.gaMeasurementId) {
-  window.dataLayer = window.dataLayer || [];
-  window.gtag = function () { window.dataLayer.push(arguments); };
-  window.gtag('js', new Date());
-  window.gtag('config', CFG.gaMeasurementId);
-  const s = document.createElement('script');
-  s.async = true;
-  s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(CFG.gaMeasurementId);
-  document.head.appendChild(s);
-}
-if (CFG.cfAnalyticsToken) { // cookie-free
+// ---------------------------------------------------------------- analytics (Cloudflare, cookie-free)
+if (CFG.cfAnalyticsToken) {
   const s = document.createElement('script');
   s.defer = true;
   s.src = 'https://static.cloudflareinsights.com/beacon.min.js';
