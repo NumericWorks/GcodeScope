@@ -7,8 +7,9 @@ const $ = (s) => document.querySelector(s);
 // ---------------------------------------------------------------- i18n
 const I18N = {
   en: {
-    soon: 'Coming soon', dzHeading: 'Free online G-code viewer', dzTitle: 'Drop a G-code file', dzSub: '.gcode · .nc · .ngc · .tap · .gco',
+    soon: 'Coming soon', dzHeading: 'Free online G-code viewer', dzTitle: 'Drop a G-code file', dzSub: '.gcode · .nc · .ngc · .tap · .h · .mpf',
     pickFile: 'Choose file', trySample: 'or try a sample:', samplePrint: '3D print', sampleCnc: 'CNC part',
+    sampleHeidenhain: 'HEIDENHAIN', sampleSiemens: 'SINUMERIK', sSkipped: 'Not drawn',
     privacy: 'Processed on your device. Your file is never uploaded.', loading: 'Reading file…',
     viewTop: 'Top view', viewFront: 'Front view', openOther: 'Open another file',
     showRapids: 'Rapid moves', showTravel: 'Travel moves', onlyCurrent: 'Current layer only',
@@ -31,15 +32,16 @@ const I18N = {
     appText: 'We’re building an ad-free mobile app that works offline at the machine — CNC-first (FANUC/HAAS, arcs, code ↔ toolpath sync) plus Bambu multi-plate .gcode.3mf.',
     faqTitle: 'About',
     faq1q: 'Is my file uploaded anywhere?', faq1a: 'No. The file is read and rendered by your browser. Nothing is sent to a server — you can even disconnect after the page loads.',
-    faq2q: 'Which files work?', faq2a: 'G-code from slicers (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) and CAM/CNC programs (.nc, .ngc, .tap). Arcs (G2/G3), inch/mm, absolute/incremental and basic drill cycles are supported.',
+    faq2q: 'Which files work?', faq2a: 'G-code from slicers (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) and CNC programs for FANUC, HEIDENHAIN (Klartext and ISO), Siemens SINUMERIK, Mazak, Mitsubishi, Kitamura, Okuma, Haas, Fagor and other ISO controls (.nc, .ngc, .tap, .h, .mpf…). Arcs, drilling / tapping / boring cycles, subprograms, macro variables and coordinate shifts/rotations are supported; tilted planes and pocket cycles are listed but not drawn.',
     faq3q: 'How accurate is the time estimate?', faq3a: 'If the slicer wrote a time into the file, we show that. Otherwise we compute a rough value from distances and feed rates, ignoring acceleration — real jobs usually take longer.',
     footer: 'Workshop tools that respect your time.',
     errParse: 'Could not read this file: ', errEmpty: 'No moves found in this file. Is it G-code?',
     err3mf: '.3mf / .gcode.3mf files are not supported yet — coming in the app. Export plain .gcode for now.',
   },
   tr: {
-    soon: 'Yakında', dzHeading: 'Ücretsiz online G-code görüntüleyici', dzTitle: 'G-code dosyasını bırak', dzSub: '.gcode · .nc · .ngc · .tap · .gco',
+    soon: 'Yakında', dzHeading: 'Ücretsiz online G-code görüntüleyici', dzTitle: 'G-code dosyasını bırak', dzSub: '.gcode · .nc · .ngc · .tap · .h · .mpf',
     pickFile: 'Dosya seç', trySample: 'ya da örnek dene:', samplePrint: '3D baskı', sampleCnc: 'CNC parça',
+    sampleHeidenhain: 'HEIDENHAIN', sampleSiemens: 'SINUMERIK', sSkipped: 'Çizilmeyen',
     privacy: 'Cihazında işlenir. Dosyan hiçbir yere yüklenmez.', loading: 'Dosya okunuyor…',
     viewTop: 'Üstten görünüm', viewFront: 'Önden görünüm', openOther: 'Başka dosya aç',
     showRapids: 'Hızlı hareketler', showTravel: 'Boş hareketler', onlyCurrent: 'Yalnızca bu katman',
@@ -62,7 +64,7 @@ const I18N = {
     appText: 'Reklamsız, makine başında çevrimdışı çalışan bir mobil uygulama hazırlıyoruz — CNC öncelikli (FANUC/HAAS, yaylar, kod ↔ takım yolu senkronu) ve Bambu çok plakalı .gcode.3mf desteği.',
     faqTitle: 'Hakkında',
     faq1q: 'Dosyam bir yere yükleniyor mu?', faq1a: 'Hayır. Dosya tarayıcında okunur ve çizilir. Sunucuya hiçbir şey gönderilmez — sayfa açıldıktan sonra internet bağlantısını kesebilirsin.',
-    faq2q: 'Hangi dosyalar çalışır?', faq2a: 'Dilimleyici çıktıları (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) ve CAM/CNC programları (.nc, .ngc, .tap). Yaylar (G2/G3), inç/mm, mutlak/artımlı ve temel delme çevrimleri desteklenir.',
+    faq2q: 'Hangi dosyalar çalışır?', faq2a: 'Dilimleyici çıktıları (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) ve FANUC, HEIDENHAIN (Klartext ve ISO), Siemens SINUMERIK, Mazak, Mitsubishi, Kitamura, Okuma, Haas, Fagor ve diğer ISO kontroller için CNC programları (.nc, .ngc, .tap, .h, .mpf…). Yaylar, delme / kılavuz / bara çevrimleri, alt programlar, makro değişkenleri ve sıfır kaydırma/döndürme desteklenir; eğik düzlemler ve cep çevrimleri listelenir ama çizilmez.',
     faq3q: 'Süre tahmini ne kadar doğru?', faq3a: 'Dilimleyici dosyaya süre yazdıysa onu gösteririz. Yoksa mesafe ve ilerleme hızından kaba bir değer hesaplarız; ivmelenme hesaba katılmaz, gerçek iş genelde daha uzun sürer.',
     footer: 'Zamanına saygı duyan atölye araçları.',
     errParse: 'Dosya okunamadı: ', errEmpty: 'Bu dosyada hareket bulunamadı. G-code olduğundan emin misin?',
@@ -260,7 +262,10 @@ function renderSummary(r) {
     rows.push([t('sRapidLen'), `${fmtNum(r.rapidLen / 1000, 2)} m`]);
     if (r.maxF > 0) rows.push([t('sFeed'), `${fmtNum(r.minF, 0)} – ${fmtNum(r.maxF, 0)} mm/min`]);
     if (r.holes.length) rows.push([`${t('sHoles')} (${fmtNum(r.holes.length, 0)})`, holesSummary(r), 'wide']);
-    if (r.tools.length) rows.push([t('sTools'), r.tools.map((x) => 'T' + x).join(', ')]);
+    if (r.tools.length) rows.push([t('sTools'), esc(r.tools.map((x) => (typeof x === 'number' ? 'T' + x : x)).join(', '))]);
+    if (r.unsupported && r.unsupported.length) {
+      rows.push([t('sSkipped'), r.unsupported.map((u) => esc(u.what) + (u.count > 1 ? ' ×' + u.count : '')).join('<br>'), 'wide']);
+    }
     rows.push([t('sUnits'), t(r.inch ? 'unitsIn' : 'unitsMm')]);
   }
   rows.push([t('sLines'), fmtNum(r.lines, 0)]);

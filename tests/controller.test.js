@@ -3,6 +3,9 @@ const { parseFile } = require('./harness');
 
 const CASES = [
   ['heidenhain-klartext.h', 'heidenhain', 'klartext', /iTNC 530|TNC 6/],
+  ['heidenhain-iso.h', 'heidenhain', 'heidenhainIso', /DIN\/ISO/],
+  ['siemens-flow.mpf', 'siemens', 'sinumerik', /840D sl/],
+  ['okuma-flow.min', 'okuma', 'okuma', /OSP-P300/],
   ['siemens-840dsl.mpf', 'siemens', 'sinumerik', /840D sl/],
   ['fanuc-0imf.nc', 'fanuc', 'iso', /0i-MF/],
   ['mazak-smoothg.eia', 'mazak', 'iso', /SmoothG/],
