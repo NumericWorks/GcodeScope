@@ -23,8 +23,11 @@
       <span class="brand-by">by NumericWorks</span>
     </a>
     <div class="topbar-actions">
-      <button class="btn btn-ghost btn-sm" id="langBtn" type="button" aria-label="Language">TR</button>
-      <a class="btn btn-accent btn-sm" href="#notify" data-i18n="navNotify">Get the app</a>
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="tr" aria-pressed="false">TR</button>
+      </div>
+      <a class="btn btn-accent btn-sm nav-cta" href="#notify"><span class="long" data-i18n="navNotify">Get the app</span><span class="short" data-i18n="navNotifyShort">Get app</span></a>
     </div>
   </header>
 

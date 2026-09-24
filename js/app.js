@@ -7,7 +7,7 @@ const $ = (s) => document.querySelector(s);
 // ---------------------------------------------------------------- i18n
 const I18N = {
   en: {
-    navNotify: 'Get the app', dzTitle: 'Drop a G-code file', dzSub: '.gcode · .nc · .ngc · .tap · .gco',
+    navNotify: 'Get the app', navNotifyShort: 'Get app', dzTitle: 'Drop a G-code file', dzSub: '.gcode · .nc · .ngc · .tap · .gco',
     pickFile: 'Choose file', trySample: 'or try a sample:', samplePrint: '3D print', sampleCnc: 'CNC part',
     privacy: 'Processed on your device. Your file is never uploaded.', loading: 'Reading file…',
     viewTop: 'Top view', viewFront: 'Front view', openOther: 'Open another file',
@@ -35,7 +35,7 @@ const I18N = {
     err3mf: '.3mf / .gcode.3mf files are not supported yet — coming in the app. Export plain .gcode for now.',
   },
   tr: {
-    navNotify: 'Uygulamayı al', dzTitle: 'G-code dosyasını bırak', dzSub: '.gcode · .nc · .ngc · .tap · .gco',
+    navNotify: 'Uygulamayı al', navNotifyShort: 'Uygulama', dzTitle: 'G-code dosyasını bırak', dzSub: '.gcode · .nc · .ngc · .tap · .gco',
     pickFile: 'Dosya seç', trySample: 'ya da örnek dene:', samplePrint: '3D baskı', sampleCnc: 'CNC parça',
     privacy: 'Cihazında işlenir. Dosyan hiçbir yere yüklenmez.', loading: 'Dosya okunuyor…',
     viewTop: 'Üstten görünüm', viewFront: 'Önden görünüm', openOther: 'Başka dosya aç',
@@ -65,7 +65,7 @@ const I18N = {
 };
 let lang = (() => {
   try { const s = localStorage.getItem('gs-lang'); if (s && I18N[s]) return s; } catch {}
-  return (navigator.language || 'en').toLowerCase().startsWith('tr') ? 'tr' : 'en';
+  return 'en'; // English by default; Turkish only when chosen in the top bar
 })();
 const t = (k) => I18N[lang][k] ?? I18N.en[k] ?? k;
 
@@ -74,14 +74,15 @@ function applyLang() {
   document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
   document.querySelectorAll('[data-i18n-title]').forEach((el) => { el.title = t(el.dataset.i18nTitle); });
-  $('#langBtn').textContent = lang === 'tr' ? 'EN' : 'TR';
+  document.querySelectorAll('[data-lang]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
   if (current) { renderSummary(current); renderLegend(current); updateLabel(); }
 }
-$('#langBtn').addEventListener('click', () => {
-  lang = lang === 'tr' ? 'en' : 'tr';
+document.querySelectorAll('[data-lang]').forEach((b) => b.addEventListener('click', () => {
+  if (b.dataset.lang === lang) return;
+  lang = b.dataset.lang;
   try { localStorage.setItem('gs-lang', lang); } catch {}
   applyLang();
-});
+}));
 
 // ---------------------------------------------------------------- viewer
 const viewer = new Viewer($('#viewer'));

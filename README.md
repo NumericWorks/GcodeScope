@@ -12,7 +12,7 @@ NumericWorks'ün ücretsiz, tarayıcıda çalışan G-code görüntüleyicisi. T
 - CNC: hareket hareket oynatma, takım konisi, satır no + koordinat
 - Hızlı/boş hareket göster/gizle, 3D/XY/XZ görünümleri, oynat (1×/4×/16×/64×)
 - Özet: boyut (baskıda 1. katmandaki purge/skirt hariç), süre ve filament (dosyada varsa dilimleyici değeri, yoksa "kaba" hesap), dilimleyici, malzeme, F aralığı, takımlar
-- EN/TR arayüz (tarayıcı diline göre, elle değiştirilebilir)
+- Arayüz varsayılan olarak İngilizce; üst bardaki EN | TR seçiciyle Türkçe (seçim tarayıcıda hatırlanır)
 
 ## Yapılandırma (`index.html` en altı)
 ```js
