@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>GcodeScope — Free G-code Viewer for CNC &amp; 3D Printing | NumericWorks</title>
+  <meta name="description" content="Free, private G-code viewer in your browser. Drop a .gcode or .nc file to see the 3D toolpath, layers, rapids, size, print time and filament. Nothing is uploaded. Works on your phone.">
+  <meta name="theme-color" content="#16181b">
+  <meta property="og:title" content="GcodeScope — Free G-code Viewer (CNC & 3D printing)">
+  <meta property="og:description" content="Drop a .gcode / .nc file and see the toolpath in 3D. Runs entirely in your browser — your file never leaves your device.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/" } }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="GcodeScope home">
+      <img src="assets/icon.svg" alt="" width="28" height="28">
+      <span class="brand-name">GcodeScope</span>
+      <span class="brand-by">by NumericWorks</span>
+    </a>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-sm" id="langBtn" type="button" aria-label="Language">TR</button>
+      <a class="btn btn-accent btn-sm" href="#notify" data-i18n="navNotify">Get the app</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="viewer-card">
+      <div class="viewer" id="viewer">
+        <div class="dropzone" id="dropzone">
+          <div class="dz-inner">
+            <svg class="dz-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M8 34 L16 26 L22 30 L30 16 L40 22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="40" cy="22" r="3.5" fill="currentColor"/></svg>
+            <h1 data-i18n="dzTitle">Drop a G-code file</h1>
+            <p class="muted" data-i18n="dzSub">.gcode · .nc · .ngc · .tap · .gco</p>
+            <label class="btn btn-accent">
+              <input type="file" id="fileInput" hidden>
+              <span data-i18n="pickFile">Choose file</span>
+            </label>
+            <div class="samples">
+              <span class="muted" data-i18n="trySample">or try a sample:</span>
+              <button class="btn btn-ghost btn-sm" type="button" data-sample="samples/sample-print.gcode" data-i18n="samplePrint">3D print</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-sample="samples/sample-cnc.nc" data-i18n="sampleCnc">CNC part</button>
+            </div>
+            <p class="privacy"><span aria-hidden="true">🔒</span> <span data-i18n="privacy">Processed on your device. Your file is never uploaded.</span></p>
+          </div>
+        </div>
+        <div class="loading" id="loading" hidden>
+          <div class="spinner"></div>
+          <div><span data-i18n="loading">Reading file…</span> <span id="loadPct"></span></div>
+        </div>
+        <div class="viewer-tools" id="viewTools" hidden>
+          <button class="icon-btn" type="button" data-view="iso" title="3D" aria-label="3D view">3D</button>
+          <button class="icon-btn" type="button" data-view="top" data-i18n-title="viewTop" aria-label="Top view">XY</button>
+          <button class="icon-btn" type="button" data-view="front" data-i18n-title="viewFront" aria-label="Front view">XZ</button>
+          <label class="icon-btn" data-i18n-title="openOther" aria-label="Open another file">
+            <input type="file" id="fileInput2" hidden>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7h6l2 2h8v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          </label>
+        </div>
+        <div class="legend" id="legend" hidden></div>
+      </div>
+
+      <div class="controls" id="controls" hidden>
+        <div class="slider-row">
+          <button class="play" id="playBtn" type="button" aria-label="Play">
+            <svg id="playIcon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7 5v14l12-7z" fill="currentColor"/></svg>
+          </button>
+          <input type="range" id="slider" min="0" max="0" value="0" aria-label="Layer / progress">
+          <button class="speed" id="speedBtn" type="button" aria-label="Playback speed">1×</button>
+        </div>
+        <div class="step-label" id="stepLabel">—</div>
+        <div class="toggles">
+          <label class="toggle"><input type="checkbox" id="rapidToggle" checked><span class="track"></span><span id="rapidLabel" data-i18n="showRapids">Rapid moves</span></label>
+          <label class="toggle" id="onlyCurrentWrap"><input type="checkbox" id="onlyCurrent"><span class="track"></span><span data-i18n="onlyCurrent">Current layer only</span></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="summary" hidden>
+      <h2 data-i18n="summary">Summary</h2>
+      <div class="file-line"><strong id="fileName"></strong> <span class="pill" id="modePill"></span></div>
+      <dl class="stats" id="stats"></dl>
+      <p class="muted small" id="estNote"></p>
+    </section>
+
+    <section class="panel notify" id="notify">
+      <h2 data-i18n="notifyTitle">Want it as a phone app?</h2>
+      <p data-i18n="notifyText">We're building an ad-free mobile app that works offline at the machine — CNC-first (FANUC/HAAS, arcs, code ↔ toolpath sync) plus Bambu multi-plate .gcode.3mf. Leave your email and we'll tell you once, when it launches.</p>
+      <form id="notifyForm" class="notify-form">
+        <input type="email" name="email" required autocomplete="email" data-i18n-ph="emailPh" placeholder="you@example.com" aria-label="Email">
+        <div class="row">
+          <select name="use" aria-label="Use">
+            <option value="" data-i18n="useQ">I use…</option>
+            <option value="3d-printer" data-i18n="use3d">3D printer</option>
+            <option value="cnc" data-i18n="useCnc">CNC</option>
+            <option value="both" data-i18n="useBoth">Both</option>
+          </select>
+          <select name="platform" aria-label="Platform">
+            <option value="" data-i18n="platQ">My phone…</option>
+            <option value="android">Android</option>
+            <option value="ios">iPhone</option>
+          </select>
+        </div>
+        <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">
+        <button class="btn btn-accent" type="submit" data-i18n="notifyBtn">Notify me</button>
+        <p class="form-msg" id="formMsg" role="status"></p>
+      </form>
+      <p class="muted small" data-i18n="noSpam">One email at launch. No spam, unsubscribe anytime.</p>
+    </section>
+
+    <section class="panel faq">
+      <h2 data-i18n="faqTitle">About</h2>
+      <details><summary data-i18n="faq1q">Is my file uploaded anywhere?</summary><p data-i18n="faq1a">No. The file is read and rendered by your browser. Nothing is sent to a server — you can even disconnect after the page loads.</p></details>
+      <details><summary data-i18n="faq2q">Which files work?</summary><p data-i18n="faq2a">G-code from slicers (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) and CAM/CNC programs (.nc, .ngc, .tap). Arcs (G2/G3), inch/mm, absolute/incremental and basic drill cycles are supported.</p></details>
+      <details><summary data-i18n="faq3q">How accurate is the time estimate?</summary><p data-i18n="faq3a">If the slicer wrote a time into the file, we show that. Otherwise we compute a rough value from distances and feed rates, ignoring acceleration — real jobs usually take longer.</p></details>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>© <span id="year"></span> NumericWorks</span>
+    <span class="muted" data-i18n="footer">Workshop tools that respect your time.</span>
+  </footer>
+
+  <script>
+    // ---- Site config: fill these in, leave empty to disable ----
+    window.GS_CONFIG = {
+      // Formspree (https://formspree.io) or any endpoint accepting a POST with FormData + "Accept: application/json"
+      formEndpoint: '',
+      // Cloudflare Web Analytics token (dash.cloudflare.com → Analytics & Logs → Web Analytics)
+      cfAnalyticsToken: ''
+    };
+  </script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
