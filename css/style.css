@@ -218,6 +218,9 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 .stats dt { font-size: .75rem; color: var(--muted); }
 .stats dd { margin: 2px 0 0; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .tag { font-weight: 400; color: var(--muted); font-size: .72rem; }
+.stats div.wide { grid-column: 1 / -1; }
+.ctl-model { font-weight: 400; }
+.pill.ctl { color: #ffd166; border-color: rgba(255, 209, 102, .4); }
 
 /* ------------------------------------------------------------ app soon */
 .app-soon { border-color: rgba(255, 122, 26, .4); }

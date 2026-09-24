@@ -21,6 +21,10 @@ const I18N = {
     estNoteCnc: 'Time is a rough estimate: feed moves at programmed F, rapids assumed at 5000 mm/min, no acceleration.',
     layer: 'Layer', of: 'of', move: 'Move', line: 'line',
     kRapid: 'Rapid', kCut: 'Feed', kPlunge: 'Plunge', kRamp: 'Ramp / helix', kRetract: 'Feed retract', kLeadIn: 'Lead-in', kLeadOut: 'Lead-out',
+    kSpot: 'Spot drill', kDrill: 'Drill / peck', kTap: 'Tap', kBore: 'Bore / ream', kBoreMill: 'Bore milling', kThreadMill: 'Thread milling',
+    showHoles: 'Hole bodies', sHoles: 'Holes',
+    hSpot: 'Spot drill', hDrill: 'Drill', hPeck: 'Peck drill', hChipbreak: 'Chip-break drill', hTap: 'Tap', hTapLH: 'Tap (left-hand)',
+    hBore: 'Bore / ream', hBoremill: 'Bore milling', hThreadmill: 'Thread milling', pecks: 'pecks', pitch: 'pitch',
     appTitle: 'Mobile app — coming soon',
     appText: 'We’re building an ad-free mobile app that works offline at the machine — CNC-first (FANUC/HAAS, arcs, code ↔ toolpath sync) plus Bambu multi-plate .gcode.3mf.',
     faqTitle: 'About',
@@ -46,6 +50,10 @@ const I18N = {
     estNoteCnc: 'Süre kaba tahmindir: kesme hareketleri programlı F ile, hızlı hareketler 5000 mm/dk varsayımıyla, ivmelenme yok.',
     layer: 'Katman', of: '/', move: 'Hareket', line: 'satır',
     kRapid: 'Hızlı', kCut: 'Kesme', kPlunge: 'Dalma', kRamp: 'Rampa / helis', kRetract: 'Geri çekme', kLeadIn: 'Giriş', kLeadOut: 'Çıkış',
+    kSpot: 'Punta', kDrill: 'Delme / gagalama', kTap: 'Kılavuz', kBore: 'Bara / rayba', kBoreMill: 'Helisel delik frezeleme', kThreadMill: 'Diş frezeleme',
+    showHoles: 'Delik gövdeleri', sHoles: 'Delikler',
+    hSpot: 'Punta', hDrill: 'Delme', hPeck: 'Gagalamalı delme', hChipbreak: 'Talaş kırmalı delme', hTap: 'Kılavuz', hTapLH: 'Kılavuz (sol)',
+    hBore: 'Bara / rayba', hBoremill: 'Helisel delik frezeleme', hThreadmill: 'Diş frezeleme', pecks: 'gaga', pitch: 'adım',
     appTitle: 'Mobil uygulama — yakında',
     appText: 'Reklamsız, makine başında çevrimdışı çalışan bir mobil uygulama hazırlıyoruz — CNC öncelikli (FANUC/HAAS, yaylar, kod ↔ takım yolu senkronu) ve Bambu çok plakalı .gcode.3mf desteği.',
     faqTitle: 'Hakkında',
@@ -121,8 +129,10 @@ function openFile(file) {
   worker.postMessage({ file, name: file.name });
 }
 
+let holeAtStep = new Map();
 function onLoaded(r) {
   current = r;
+  holeAtStep = new Map((r.holes || []).map((h) => [h.step, h]));
   setLoading(false);
   $('#dropzone').hidden = true;
   $('#viewTools').hidden = false;
@@ -133,6 +143,8 @@ function onLoaded(r) {
   slider.max = r.stepCut.length - 1;
   slider.value = slider.max;
   $('#onlyCurrentWrap').hidden = r.mode !== 'print';
+  $('#holesWrap').hidden = !(r.holes && r.holes.length);
+  viewer.setShowHoles($('#holesToggle').checked);
   $('#onlyCurrent').checked = false;
   viewer.setOnlyCurrent(false);
   viewer.setShowRapids($('#rapidToggle').checked);
@@ -151,7 +163,27 @@ function renderLegend(r) {
     : cncLegend(r);
 }
 
-const KIND_KEYS = ['kCut', 'kPlunge', 'kRamp', 'kRetract', 'kLeadIn', 'kLeadOut'];
+const KIND_KEYS = ['kCut', 'kPlunge', 'kRamp', 'kRetract', 'kLeadIn', 'kLeadOut', 'kSpot', 'kDrill', 'kTap', 'kBore', 'kBoreMill', 'kThreadMill'];
+const HOLE_KEY = { spot: 'hSpot', drill: 'hDrill', peck: 'hPeck', chipbreak: 'hChipbreak', tap: 'hTap', bore: 'hBore', boremill: 'hBoremill', threadmill: 'hThreadmill' };
+const holeName = (h) => t(h.type === 'tap' && h.lh ? 'hTapLH' : HOLE_KEY[h.type]);
+// "M10×1.5", "Ø8.5", "Ø30 · P2" — size of a hole for labels (nothing when the tool size is unknown)
+function holeSize(h) {
+  const d = fmtNum(h.d, 2), p = fmtNum(h.pitch, 2);
+  if (h.type === 'tap') return h.dKnown && h.pitch ? `M${d}×${p}` : h.pitch ? `${t('pitch')} ${p}` : h.dKnown ? `M${d}` : '';
+  if (h.type === 'threadmill') return (h.dKnown ? `Ø${d}` : '') + (h.pitch ? ` ${t('pitch')} ${p}` : '');
+  return h.dKnown ? `Ø${d}` : '';
+}
+function holesSummary(r) {
+  const groups = new Map();
+  for (const h of r.holes) {
+    const k = holeName(h) + '|' + holeSize(h);
+    groups.set(k, (groups.get(k) || 0) + 1);
+  }
+  return [...groups].map(([k, n]) => {
+    const [name, size] = k.split('|');
+    return `${esc(name)}${size ? ' <span class="ctl-model">' + esc(size.trim()) + '</span>' : ''} ×${n}`;
+  }).join('<br>');
+}
 const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 function cncLegend(r) {
   // only the move types this program actually contains
@@ -204,12 +236,13 @@ function renderSummary(r) {
     rows.push([t('sCutLen'), `${fmtNum(r.cutLen / 1000, 2)} m`]);
     rows.push([t('sRapidLen'), `${fmtNum(r.rapidLen / 1000, 2)} m`]);
     if (r.maxF > 0) rows.push([t('sFeed'), `${fmtNum(r.minF, 0)} – ${fmtNum(r.maxF, 0)} mm/min`]);
+    if (r.holes.length) rows.push([`${t('sHoles')} (${fmtNum(r.holes.length, 0)})`, holesSummary(r), 'wide']);
     if (r.tools.length) rows.push([t('sTools'), r.tools.map((x) => 'T' + x).join(', ')]);
     rows.push([t('sUnits'), t(r.inch ? 'unitsIn' : 'unitsMm')]);
   }
   rows.push([t('sLines'), fmtNum(r.lines, 0)]);
   rows.push([t('sMoves'), fmtNum(r.motionCount, 0)]);
-  $('#stats').innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+  $('#stats').innerHTML = rows.map(([k, v, cls]) => `<div${cls ? ` class="${cls}"` : ''}><dt>${k}</dt><dd>${v}</dd></div>`).join('');
   $('#estNote').textContent = t(r.mode === 'print' ? 'estNotePrint' : 'estNoteCnc');
 }
 
@@ -224,7 +257,9 @@ function updateLabel() {
     const x = r.stepPos[i * 3], y = r.stepPos[i * 3 + 1];
     // what the current block does: kind of its last feed segment, or rapid
     const c1 = r.stepCut[i], c0 = i > 0 ? r.stepCut[i - 1] : 0;
-    const kind = c1 > c0 ? t(KIND_KEYS[r.cutKind[c1 - 1]]) : r.stepRapid[i] > (i > 0 ? r.stepRapid[i - 1] : 0) ? t('kRapid') : '';
+    let kind = c1 > c0 ? t(KIND_KEYS[r.cutKind[c1 - 1]]) : r.stepRapid[i] > (i > 0 ? r.stepRapid[i - 1] : 0) ? t('kRapid') : '';
+    const h = holeAtStep.get(i);
+    if (h) kind = [holeName(h), holeSize(h), h.pecks.length ? `${h.pecks.length + 1} ${t('pecks')}` : ''].filter(Boolean).join(' ');
     $('#stepLabel').textContent = `${t('move')} ${fmtNum(i + 1, 0)} ${t('of')} ${fmtNum(n, 0)} · ${t('line')} ${fmtNum(r.stepLine[i], 0)}${kind ? ' · ' + kind : ''} · X${fmtNum(x, 3)} Y${fmtNum(y, 3)} Z${fmtNum(z, 3)}`;
   }
 }
@@ -238,6 +273,7 @@ function layerZ(r, i) {
 const slider = $('#slider');
 slider.addEventListener('input', () => { viewer.setStep(+slider.value); updateLabel(); });
 $('#rapidToggle').addEventListener('change', (e) => viewer.setShowRapids(e.target.checked));
+$('#holesToggle').addEventListener('change', (e) => viewer.setShowHoles(e.target.checked));
 $('#onlyCurrent').addEventListener('change', (e) => viewer.setOnlyCurrent(e.target.checked));
 document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => viewer.fit(b.dataset.view)));
 

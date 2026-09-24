@@ -20,5 +20,5 @@ module.exports = async (t) => {
   r = await parseFile(t.sample('sample-cnc.nc'));
   t.check('sample: G41/G40 leads found, corner radii are not leads', r.kindCounts[K.in] > 0 && r.kindCounts[K.out] > 0, r.kindCounts);
   t.check('sample: helical pocket entry is a ramp', r.kindCounts[K.ramp] > 0, r.kindCounts);
-  t.check('sample: drill cycles are plunges', r.kindCounts[K.plunge] >= 4, r.kindCounts);
+  t.check('sample: drill cycle feeds are drill moves', r.kindCounts[7] >= 4, r.kindCounts);
 };

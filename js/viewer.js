@@ -23,7 +23,14 @@ export const KIND_COLORS = [
   0x9aa5b1, // K_RETRACT  feed move out of the material
   0x3ddc84, // K_LEADIN   lead-in (G41/G42 approach or CAM entry arc)
   0xe056fd, // K_LEADOUT  lead-out (G40 departure or CAM exit arc)
+  0xd4e157, // K_SPOT     spot / center drill
+  0xff6e40, // K_DRILL    drilling, peck (G83) and chip-break (G73)
+  0xf48fb1, // K_TAP      tapping (G84 / G74)
+  0x26c6da, // K_BORE     boring / reaming (G85–G89, G76)
+  0x7986ff, // K_BOREMILL helical bore milling
+  0xb388ff, // K_THREADMILL thread milling
 ];
+const HOLE_KIND = { spot: 6, drill: 7, peck: 7, chipbreak: 7, tap: 8, bore: 9, boremill: 10, threadmill: 11 };
 export const RAPID_COLOR = COLORS.rapid;
 
 export class Viewer {
@@ -56,6 +63,7 @@ export class Viewer {
     this.scene.add(this.tool);
 
     this.showRapids = true;
+    this.showHoles = true;
     this.onlyCurrent = false;
     this.data = null;
     this.step = 0;
@@ -153,6 +161,9 @@ export class Viewer {
     this.rapidLines.frustumCulled = false;
     this.paths.add(this.rapidLines);
 
+    // --- holes: see-through bodies with rims, peck rings and thread helices
+    this.buildHoles(d, size);
+
     // --- helpers: grid on the lowest plane + axes at origin (work zero)
     const gsize = Math.pow(10, Math.ceil(Math.log10(size * 1.4)));
     const div = 20;
@@ -176,6 +187,85 @@ export class Viewer {
 
     this.setStep(d.stepCut.length - 1);
     this.fit('iso');
+  }
+
+  buildHoles(d, size) {
+    this.holeMesh = this.holeLines = null;
+    const holes = d.holes || [];
+    if (!holes.length) return;
+    const tri = [], triCol = [], lin = [], linCol = [];
+    this.holeTriEnd = new Uint32Array(holes.length);
+    this.holeLineEnd = new Uint32Array(holes.length);
+    this.holeStep = new Uint32Array(holes.length);
+    const fallbackR = Math.min(5, Math.max(0.5, size * 0.01));
+    const N = 20, c = new THREE.Color();
+    const ring = (x, y, z, r, rgb) => {
+      for (let k = 0; k < N; k++) {
+        const a0 = (k / N) * Math.PI * 2, a1 = ((k + 1) / N) * Math.PI * 2;
+        lin.push(x + r * Math.cos(a0), y + r * Math.sin(a0), z, x + r * Math.cos(a1), y + r * Math.sin(a1), z);
+        linCol.push(...rgb, ...rgb);
+      }
+    };
+    // surface of revolution between (z0, r0) and (z1, r1)
+    const band = (x, y, z0, r0, z1, r1, rgb) => {
+      for (let k = 0; k < N; k++) {
+        const a0 = (k / N) * Math.PI * 2, a1 = ((k + 1) / N) * Math.PI * 2;
+        const c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
+        tri.push(x + r0 * c0, y + r0 * s0, z0, x + r0 * c1, y + r0 * s1, z0, x + r1 * c1, y + r1 * s1, z1,
+          x + r0 * c0, y + r0 * s0, z0, x + r1 * c1, y + r1 * s1, z1, x + r1 * c0, y + r1 * s0, z1);
+        for (let v = 0; v < 6; v++) triCol.push(...rgb);
+      }
+    };
+    const helix = (x, y, zb, zt, r, pitch, lh, rgb) => {
+      const turns = (zt - zb) / pitch;
+      if (!(turns > 0) || turns > 400) return;
+      const n = Math.ceil(turns * 16), sgn = lh ? -1 : 1;
+      let px = x + r, py = y, pz = zb;
+      for (let k = 1; k <= n; k++) {
+        const t = k / n, a = sgn * t * turns * Math.PI * 2;
+        const nx = x + r * Math.cos(a), ny = y + r * Math.sin(a), nz = zb + t * (zt - zb);
+        lin.push(px, py, pz, nx, ny, nz); linCol.push(...rgb, ...rgb);
+        px = nx; py = ny; pz = nz;
+      }
+    };
+    holes.forEach((h, i) => {
+      c.setHex(KIND_COLORS[HOLE_KIND[h.type]] ?? KIND_COLORS[7]);
+      const rgb = [c.r, c.g, c.b];
+      const r = h.d > 0 ? h.d / 2 : fallbackR;
+      const top = Math.max(h.top, h.bottom), bot = h.bottom;
+      if (h.type === 'spot') {
+        // 90° countersink cone: radius grows 1:1 with height, up to the tool radius
+        const hgt = Math.min(top - bot, r);
+        band(h.x, h.y, bot, 0, bot + hgt, hgt, rgb);
+        ring(h.x, h.y, bot + hgt, hgt, rgb);
+      } else if (h.type === 'drill' || h.type === 'peck' || h.type === 'chipbreak') {
+        // 118° drill point
+        const tip = Math.min(r / Math.tan(59 * Math.PI / 180), top - bot);
+        band(h.x, h.y, bot, 0, bot + tip, r, rgb);
+        band(h.x, h.y, bot + tip, r, top, r, rgb);
+        ring(h.x, h.y, top, r, rgb); ring(h.x, h.y, bot + tip, r, rgb);
+        for (const pz of h.pecks) { ring(h.x, h.y, pz, r * 1.12, rgb); }
+      } else {
+        band(h.x, h.y, bot, r, top, r, rgb);
+        band(h.x, h.y, bot, 0, bot, r, rgb); // flat bottom
+        ring(h.x, h.y, top, r, rgb); ring(h.x, h.y, bot, r, rgb);
+        if ((h.type === 'tap' || h.type === 'threadmill') && h.pitch > 0) helix(h.x, h.y, bot, top, r * 1.01, h.pitch, h.lh, rgb);
+      }
+      this.holeTriEnd[i] = tri.length / 3;
+      this.holeLineEnd[i] = lin.length / 3;
+      this.holeStep[i] = h.step;
+    });
+    const mg = new THREE.BufferGeometry();
+    mg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(tri), 3));
+    mg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(triCol), 3));
+    this.holeMesh = new THREE.Mesh(mg, new THREE.MeshBasicMaterial({
+      vertexColors: true, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false,
+    }));
+    const lg = new THREE.BufferGeometry();
+    lg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(lin), 3));
+    lg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(linCol), 3));
+    this.holeLines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.9 }));
+    for (const o of [this.holeMesh, this.holeLines]) { o.frustumCulled = false; o.renderOrder = 1; this.paths.add(o); }
   }
 
   setStep(i) {
@@ -205,12 +295,21 @@ export class Viewer {
       this.curLines.visible = !atEnd;
       this.curLines.geometry.setDrawRange(prevCut * 2, (cutEnd - prevCut) * 2);
     }
+    if (this.holeMesh) {
+      // holes finished up to this step
+      let lo = 0, hi = this.holeStep.length;
+      while (lo < hi) { const mid = (lo + hi) >> 1; if (this.holeStep[mid] <= i) lo = mid + 1; else hi = mid; }
+      this.holeMesh.visible = this.holeLines.visible = this.showHoles && lo > 0;
+      this.holeMesh.geometry.setDrawRange(0, lo ? this.holeTriEnd[lo - 1] : 0);
+      this.holeLines.geometry.setDrawRange(0, lo ? this.holeLineEnd[lo - 1] : 0);
+    }
     if (this.tool.visible !== (d.mode === 'cnc')) this.tool.visible = d.mode === 'cnc';
     this.tool.position.set(d.stepPos[i * 3], d.stepPos[i * 3 + 1], d.stepPos[i * 3 + 2]);
     this.requestRender();
   }
 
   setShowRapids(v) { this.showRapids = v; this.setStep(this.step); }
+  setShowHoles(v) { this.showHoles = v; this.setStep(this.step); }
   setOnlyCurrent(v) { this.onlyCurrent = v; this.setStep(this.step); }
 
   fit(view = 'iso') {

@@ -44,7 +44,31 @@ class UintBuf {
 }
 
 // Kind of each cut (feed) segment — mirrored in viewer.js (KIND_COLORS) and app.js (legend).
-const K_CUT = 0, K_PLUNGE = 1, K_RAMP = 2, K_RETRACT = 3, K_LEADIN = 4, K_LEADOUT = 5, K_COUNT = 6;
+const K_CUT = 0, K_PLUNGE = 1, K_RAMP = 2, K_RETRACT = 3, K_LEADIN = 4, K_LEADOUT = 5;
+// hole making — feed moves inside drilling/tapping/boring cycles and helical bore/thread milling
+const K_SPOT = 6, K_DRILL = 7, K_TAP = 8, K_BORE = 9, K_BOREMILL = 10, K_THREADMILL = 11, K_COUNT = 12;
+// hole types → segment kind. 'peck' = G83 full retract, 'chipbreak' = G73 short retract.
+const HOLE_KIND = { spot: K_SPOT, drill: K_DRILL, peck: K_DRILL, chipbreak: K_DRILL, tap: K_TAP, bore: K_BORE, boremill: K_BOREMILL, threadmill: K_THREADMILL };
+const PECK_CLEAR = 0.5; // mm, G83 re-approach / G73 retract distance (Fanuc parameter 5114/5115 default range)
+// ISO metric coarse pitches, for "M10" style tap names without an explicit pitch
+const METRIC_PITCH = { 1: 0.25, 1.2: 0.25, 1.6: 0.35, 2: 0.4, 2.5: 0.45, 3: 0.5, 4: 0.7, 5: 0.8, 6: 1, 8: 1.25, 10: 1.5, 12: 1.75,
+  14: 2, 16: 2, 18: 2.5, 20: 2.5, 22: 2.5, 24: 3, 27: 3, 30: 3.5, 33: 3.5, 36: 4, 42: 4.5, 48: 5 };
+const SPOT_RE = /SPOT|CENTER|CENTRE|PUNTA|ZENTRIER|ANBOHR|NC-?DRILL|CHAMFER|PAH/;
+const THREAD_RE = /THREAD|THD|GEWINDE|D[İI]Ş|DIS\b|FILET/;
+
+// Tool info from a comment: tool diameter d, thread size threadD / pitch (taps, thread mills), name
+function toolFromComment(c) {
+  const u = c.toUpperCase();
+  const info = { name: u.trim().slice(0, 60) };
+  let m;
+  if ((m = /\bM(\d+(?:\.\d+)?)\s*[X×]\s*(\d+(?:\.\d+)?)/.exec(u))) { info.threadD = +m[1]; info.pitch = +m[2]; }
+  else if ((m = /\bM(\d+(?:\.\d+)?)\b/.exec(u)) && METRIC_PITCH[+m[1]] && /TAP|KILAVUZ|KLAVUZ|GEWINDE|THREAD|D[İI]Ş/.test(u)) {
+    info.threadD = +m[1]; info.pitch = METRIC_PITCH[+m[1]];
+  }
+  if ((m = /\bD\s*=\s*(\d+(?:\.\d+)?)/.exec(u)) || (m = /(?:Ø|DIA(?:METER|M)?\.?\s*[-:=]?\s*|\bD)(\d+(?:\.\d+)?)/.exec(u))
+    || (m = /(\d+(?:\.\d+)?)\s*MM\b/.exec(u))) info.d = +m[1];
+  return info;
+}
 const LEAD_MAX_SWEEP = 100 * Math.PI / 180, LEAD_MAX_R = 25; // heuristic lead arc limits (mm)
 
 const WORD_RE = /([A-Z])\s*([-+]?(?:\d+\.?\d*|\.\d+))/g;
@@ -116,7 +140,10 @@ function parse(text, name) {
   let absolute = true, absE = true, scale = 1, inch = false;
   let motion = 0; // 0..3, or 81.. for canned cycle
   let plane = 17, feed = 0;
-  let retractMode = 98, cycleR = 0, cycleZ = 0;
+  let retractMode = 98, cycleR = 0, cycleZ = 0, cycleCode = 81, cycleInitZ = 0, cycleQ = 0, cycleP = 0;
+  let spindle = 0, feedPerRev = false;
+  let tool = null; const toolInfo = {};
+  const holes = [];     // { type, x, y, top, bottom, d, dKnown, pitch, lh, pecks, step, line, tool }
   const meta = {};
   let lineNo = 0;
 
@@ -172,7 +199,8 @@ function parse(text, name) {
     x = nx; y = ny; z = nz;
   };
 
-  let arcSweep = 0, arcR = 0; // of the last arc() call, for lead-in/out detection
+  // of the last arc() call, for lead-in/out and helix detection
+  let arcSweep = 0, arcR = 0, arcCx = 0, arcCy = 0;
   const arc = (cw, tx, ty, tz, w, isCut) => {
     arcSweep = 0; arcR = 0;
     // Map to plane axes: a,b in plane, c = helical axis
@@ -199,7 +227,7 @@ function parse(text, name) {
     let sweep = t - s;
     if (cw) { if (sweep >= -1e-9) sweep -= 2 * Math.PI; }
     else { if (sweep <= 1e-9) sweep += 2 * Math.PI; }
-    arcSweep = Math.abs(sweep); arcR = r;
+    arcSweep = Math.abs(sweep); arcR = r; arcCx = ca; arcCy = cb;
     const tol = Math.min(0.02, r * 0.1);
     const step = Math.max(2 * Math.acos(Math.max(-1, 1 - tol / r)), Math.PI / 90);
     const n = Math.min(720, Math.max(4, Math.ceil(Math.abs(sweep) / step)));
@@ -291,6 +319,117 @@ function parse(text, name) {
     }
   }
 
+  // --- Hole making
+  const curTool = () => (tool !== null && toolInfo[tool]) || {};
+  // One hole from a canned cycle (any controller). o: { type, x, y, init, r, bottom, top?, q, pitch?, lh?, dwell? }
+  // Emits the tool path the cycle runs and records the hole for the viewer.
+  function drillHole(o) {
+    leaveMaterial();
+    const { x: px, y: py } = o;
+    const kind = HOLE_KIND[o.type];
+    linear(px, py, z, false, feed);                     // position at the current level
+    linear(px, py, o.r, false, feed);                   // rapid to R
+    const pecks = [];
+    curKind = kind;
+    if ((o.type === 'peck' || o.type === 'chipbreak') && o.q > 0) {
+      let cur = o.r;
+      while (cur > o.bottom + 1e-6) {
+        const next = Math.max(cur - o.q, o.bottom);
+        if (o.type === 'peck' && cur < o.r) linear(px, py, cur + PECK_CLEAR, false, feed);
+        curKind = kind;
+        linear(px, py, next, true, feed);
+        if (next > o.bottom + 1e-6) {
+          pecks.push(next);
+          linear(px, py, o.type === 'peck' ? o.r : next + PECK_CLEAR, false, feed);
+        }
+        cur = next;
+      }
+    } else {
+      linear(px, py, o.bottom, true, feed);
+    }
+    // feed out for taps and reaming/boring with feed return, rapid otherwise
+    const feedOut = o.type === 'tap' || (o.type === 'bore' && o.feedOut);
+    curKind = kind;
+    linear(px, py, o.r, feedOut, feed);
+    linear(px, py, o.retract, false, feed);
+    const t = curTool();
+    holes.push({
+      type: o.type, x: px, y: py, top: o.top !== undefined ? o.top : o.r, bottom: o.bottom,
+      d: o.d || (o.type === 'tap' && t.threadD) || t.d || 0, dKnown: !!(o.d || (o.type === 'tap' && t.threadD) || t.d),
+      pitch: o.pitch || 0, lh: !!o.lh, pecks,
+      step: stepCut.n, line: lineNo, tool,
+    });
+  }
+
+  // Fanuc-family canned cycles G73/G74/G76/G81–G89 (also Haas, Mazak EIA, Mitsubishi, Okuma G-mode...)
+  function isoCycle(hasX, hasY, tx, ty) {
+    const w = words;
+    if (w.R !== undefined) cycleR = absolute ? w.R * scale : cycleInitZ + w.R * scale;
+    if (w.Z !== undefined) cycleZ = absolute ? w.Z * scale : cycleR + w.Z * scale;
+    if (w.Q !== undefined) cycleQ = Math.abs(w.Q) * scale;
+    if (w.P !== undefined) cycleP = w.P;
+    const reps = w.K !== undefined ? w.K : w.L !== undefined ? w.L : 1;
+    const c = cycleCode, t = curTool(), name = t.name || '';
+    const depth = cycleR - cycleZ;
+    let type;
+    if (c === 84 || c === 74 || c === 84.2 || c === 84.3) type = 'tap';
+    else if (c === 83) type = cycleQ > 0 ? 'peck' : 'drill';
+    else if (c === 73) type = cycleQ > 0 ? 'chipbreak' : 'drill';
+    else if (c === 85 || c === 86 || c === 87 || c === 88 || c === 89 || c === 76) type = 'bore';
+    else if (SPOT_RE.test(name)) type = 'spot';
+    else if (/DRILL|MATKAP|BOHRER|FORET/.test(name)) type = 'drill';
+    else type = depth <= (t.d ? Math.min(t.d, 3.5) : 3.5) ? 'spot' : 'drill';
+    let pitch = 0;
+    if (type === 'tap') pitch = feedPerRev ? feed : spindle > 0 ? feed / spindle : t.pitch || 0;
+    let px = hasX ? tx : x, py = hasY ? ty : y;
+    for (let i = 0; i < reps; i++) {
+      if (i > 0 && !absolute) { px += hasX ? w.X * scale : 0; py += hasY ? w.Y * scale : 0; }
+      drillHole({
+        type, x: px, y: py, r: cycleR, bottom: cycleZ, q: cycleQ, pitch, lh: c === 74,
+        feedOut: c === 85 || c === 89, retract: retractMode === 98 ? Math.max(cycleInitZ, cycleR) : cycleR,
+      });
+    }
+  }
+
+  // Helical interpolation → bore milling / thread milling (G17 only). A run of same-centre helical
+  // arcs becomes a hole when the tool then leaves (rapid, moves up, or returns inside the circle);
+  // if it moves outward instead it was the helical entry of a pocket and stays a ramp.
+  let hx = null;
+  const TWO_PI = 2 * Math.PI;
+  function helixTrack(isCut, isArc, s, z0) {
+    const dz = z - z0;
+    if (isCut && isArc && plane === 17) {
+      const same = hx && Math.abs(arcCx - hx.cx) < 1e-3 && Math.abs(arcCy - hx.cy) < 1e-3 && Math.abs(arcR - hx.r) < 1e-3;
+      if (same && (Math.abs(dz) > 1e-6 || arcSweep > TWO_PI - 0.02)) {
+        if (Math.abs(dz) > 1e-6) { hx.turns += arcSweep / TWO_PI; hx.dz += dz; }
+        else hx.flat = true;
+        hx.lo = Math.min(hx.lo, z); hx.hi = Math.max(hx.hi, z); hx.e = cut.n / 6; hx.step = stepCut.n - 1;
+        return;
+      }
+      if (Math.abs(dz) > 1e-6) {
+        if (hx) finishHelix(false);
+        hx = { cx: arcCx, cy: arcCy, r: arcR, s, e: cut.n / 6, turns: arcSweep / TWO_PI, dz, lo: Math.min(z0, z), hi: Math.max(z0, z),
+          flat: false, step: stepCut.n - 1, line: lineNo };
+        return;
+      }
+    }
+    if (!hx) return;
+    const inside = Math.hypot(x - hx.cx, y - hx.cy) <= hx.r + 1e-3;
+    finishHelix(!isCut || dz > 1e-6 || inside);
+  }
+  function finishHelix(ok) {
+    const h = hx; hx = null;
+    if (!ok || h.turns < 0.9) return;
+    const t = curTool();
+    const type = h.dz > 0 || THREAD_RE.test(t.name || '') ? 'threadmill' : 'boremill';
+    setKind(h.s, h.e, HOLE_KIND[type]);
+    const d = t.d ? 2 * h.r + t.d : type === 'threadmill' && t.threadD ? t.threadD : 2 * h.r;
+    holes.push({
+      type, x: h.cx, y: h.cy, top: h.hi, bottom: h.lo, d, dKnown: !!(t.d || (type === 'threadmill' && t.threadD)),
+      pitch: type === 'threadmill' ? Math.abs(h.dz) / h.turns : 0, lh: false, pecks: [], step: h.step, line: h.line, tool,
+    });
+  }
+
   let pos = 0, lastProgress = 0;
   let words = {};
   const gList = [];
@@ -309,13 +448,20 @@ function parse(text, name) {
     }
 
     // comments
+    let cmt = '';
     let semi = raw.indexOf(';');
     if (semi !== -1) {
       const c = raw.slice(semi + 1);
       if (c.length < 300) readMeta(c, meta);
+      cmt = c;
       raw = raw.slice(0, semi);
     }
-    if (raw.indexOf('(') !== -1) raw = raw.replace(/\([^)]*\)?/g, ' ');
+    if (raw.indexOf('(') !== -1) raw = raw.replace(/\([^)]*\)?/g, (p) => { cmt += ' ' + p.slice(1, -1); return ' '; });
+    if (cmt && !isPrint) {
+      // tool table comments, e.g. Fusion "(T1 D=10. CR=0. - ZMIN=-9. - flat end mill)"
+      const tm = /^\s*T(\d+)\b/i.exec(cmt);
+      if (tm && !/\bT\d/i.test(raw)) toolInfo[+tm[1]] = Object.assign(toolInfo[+tm[1]] || {}, toolFromComment(cmt));
+    }
     if (!raw.trim()) continue;
     const line = raw.toUpperCase();
 
@@ -342,7 +488,12 @@ function parse(text, name) {
       else if (g === 90) absolute = true;
       else if (g === 91) absolute = false;
       else if (g === 80) motion = 0;
-      else if (g === 81 || g === 82 || g === 83 || g === 73 || g === 85 || g === 86 || g === 89 || g === 84) motion = 81;
+      else if ((g >= 81 && g <= 89) || g === 73 || g === 74 || g === 76 || g === 84.2 || g === 84.3) {
+        if (motion !== 81) cycleInitZ = z;
+        motion = 81; cycleCode = g;
+      }
+      else if (g === 94) feedPerRev = false;
+      else if (g === 95) feedPerRev = true;
       else if (g === 98 || g === 99) retractMode = g;
       else if (g === 40 || g === 41 || g === 42) { if (g !== comp) compPending = g; comp = g; }
       else if (g === 92 || g === 28 || g === 10 || g === 4 || g === 30 || g === 52 || g === 29 || g === 38.2) special = g;
@@ -353,7 +504,11 @@ function parse(text, name) {
       else if (mm === 83) absE = false;
       else if (mm === 6) toolChanges++;
     }
-    if (words.T !== undefined) tools.add(words.T);
+    if (words.T !== undefined) {
+      tools.add(words.T); tool = words.T;
+      if (cmt && !isPrint) toolInfo[tool] = Object.assign(toolInfo[tool] || {}, toolFromComment(cmt));
+    }
+    if (words.S !== undefined) spindle = words.S;
     if (words.F !== undefined && words.F > 0) {
       feed = words.F * scale;
     }
@@ -396,17 +551,8 @@ function parse(text, name) {
     if (feed > 0 && motion !== 0) { if (feed < minF) minF = feed; if (feed > maxF) maxF = feed; }
 
     if (motion === 81 && !isPrint) {
-      // Canned drill cycle (simplified): rapid XY, rapid to R, feed to Z, rapid back
-      if (words.R !== undefined) cycleR = absolute ? words.R * scale : z + words.R * scale;
-      if (hasZ) cycleZ = absolute ? words.Z * scale : cycleR + words.Z * scale;
-      const initZ = z;
-      const px = hasX ? tx : x, py = hasY ? ty : y;
-      leaveMaterial();
-      linear(px, py, Math.max(initZ, cycleR), false, feed);
-      linear(px, py, cycleR, false, feed);
-      curKind = K_PLUNGE;
-      linear(px, py, cycleZ, true, feed);
-      linear(px, py, retractMode === 98 ? Math.max(initZ, cycleR) : cycleR, false, feed);
+      if (hx) finishHelix(true);
+      isoCycle(hasX, hasY, tx, ty);
       motionCount++;
       pushStep();
       continue;
@@ -423,16 +569,16 @@ function parse(text, name) {
     }
 
     const isArc = (motion === 2 || motion === 3) && (words.I !== undefined || words.J !== undefined || words.K !== undefined || words.R !== undefined);
-    const segStart = cut.n / 6;
+    const segStart = cut.n / 6, z0 = z;
     if (!isPrint) classify(tx, ty, tz, isCut, isArc);
     if (isArc) arc(motion === 2, tx, ty, tz, words, isCut);
     else linear(tx, ty, tz, isCut, feed);
     if (!isPrint && isCut) afterFeed(segStart, isArc);
     motionCount++;
-    if (!isPrint) pushStep();
+    if (!isPrint) { pushStep(); helixTrack(isCut, isArc, segStart, z0); }
   }
   pushStep(); // final (last layer end / final move)
-  if (!isPrint) leaveMaterial();
+  if (!isPrint) { leaveMaterial(); if (hx) finishHelix(true); }
   const kindArr = cutKind.done();
   if (!isPrint) for (let i = 0; i < kindArr.length; i++) kindCounts[kindArr[i]]++;
 
@@ -453,7 +599,7 @@ function parse(text, name) {
     minF: minF === Infinity ? 0 : minF, maxF,
     toolChanges, tools: [...tools].sort((a, b) => a - b),
     meta,
-    cutPos: cut.done(), rapidPos: rapid.done(), cutZ: cutZ.done(), cutKind: kindArr, kindCounts,
+    cutPos: cut.done(), rapidPos: rapid.done(), cutZ: cutZ.done(), cutKind: kindArr, kindCounts, holes,
     stepCut: stepCut.done(), stepRapid: stepRapid.done(), stepLine: stepLine.done(), stepPos: stepPos.done(),
   };
 }
