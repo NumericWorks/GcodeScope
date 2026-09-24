@@ -17,12 +17,13 @@ NumericWorks'ün ücretsiz, tarayıcıda çalışan G-code görüntüleyicisi. T
 ## Yapılandırma (`index.html` en altı)
 ```js
 window.GS_CONFIG = {
-  formEndpoint: '',      // ör. https://formspree.io/f/xxxxxx
+  gaMeasurementId: '',  // Google Analytics 4, ör. G-XXXXXXXXXX
   cfAnalyticsToken: ''   // Cloudflare Web Analytics token
 };
 ```
-- **E-posta formu:** `email`, `use` (3d-printer/cnc/both), `platform` (android/ios), `lang`, `lastFileType` alanlarını FormData olarak POST eder, `Accept: application/json` başlığıyla. Formspree ücretsiz planıyla doğrudan uyumlu. `_gotcha` bot tuzağı alanı var.
-- **Analitik:** token girilirse Cloudflare beacon'ı yüklenir (çerezsiz). Not: CF Web Analytics özel olay (ör. "dosya açıldı") saymaz; sadece sayfa görüntülemesi.
+- **Google Analytics:** ID girilirse standart gtag.js yüklenir (sayfa görüntüleme). GA çerez kullanır.
+- **Cloudflare Web Analytics:** token girilirse beacon yüklenir (çerezsiz). Özel olay saymaz; sadece sayfa görüntülemesi.
+- E-posta toplama yok; üst barda ve sayfada "iOS · Android — yakında" rozeti var.
 
 ## Yerelde çalıştırma
 Module worker ve import map `file://` üzerinden çalışmaz, küçük bir sunucu gerekir:
@@ -34,7 +35,7 @@ npx http-server -p 8080   # veya: python3 -m http.server 8080
 ```
 index.html              sayfa + config
 css/style.css           arayüz (mobil öncelikli)
-js/app.js               arayüz mantığı, i18n, form, analitik
+js/app.js               arayüz mantığı, i18n, analitik
 js/viewer.js            Three.js sahnesi (drawRange ile katman/ilerleme)
 js/parser.worker.js     G-code ayrıştırıcı (Web Worker)
 vendor/                 three.js r170 (MIT)

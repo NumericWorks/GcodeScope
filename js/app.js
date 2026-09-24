@@ -7,7 +7,7 @@ const $ = (s) => document.querySelector(s);
 // ---------------------------------------------------------------- i18n
 const I18N = {
   en: {
-    navNotify: 'Get the app', navNotifyShort: 'Get app', dzTitle: 'Drop a G-code file', dzSub: '.gcode · .nc · .ngc · .tap · .gco',
+    soon: 'Coming soon', dzTitle: 'Drop a G-code file', dzSub: '.gcode · .nc · .ngc · .tap · .gco',
     pickFile: 'Choose file', trySample: 'or try a sample:', samplePrint: '3D print', sampleCnc: 'CNC part',
     privacy: 'Processed on your device. Your file is never uploaded.', loading: 'Reading file…',
     viewTop: 'Top view', viewFront: 'Front view', openOther: 'Open another file',
@@ -20,12 +20,8 @@ const I18N = {
     estNotePrint: '“rough” values are computed from distances and feed rates and ignore acceleration.',
     estNoteCnc: 'Time is a rough estimate: feed moves at programmed F, rapids assumed at 5000 mm/min, no acceleration.',
     layer: 'Layer', of: 'of', move: 'Move', line: 'line',
-    notifyTitle: 'Want it as a phone app?',
-    notifyText: 'We’re building an ad-free mobile app that works offline at the machine — CNC-first (FANUC/HAAS, arcs, code ↔ toolpath sync) plus Bambu multi-plate .gcode.3mf. Leave your email and we’ll tell you once, when it launches.',
-    emailPh: 'you@example.com', useQ: 'I use…', use3d: '3D printer', useCnc: 'CNC', useBoth: 'Both',
-    platQ: 'My phone…', notifyBtn: 'Notify me', noSpam: 'One email at launch. No spam, unsubscribe anytime.',
-    formOk: 'Thanks! You’re on the list.', formErr: 'Something went wrong. Please try again.',
-    formOff: 'Sign-up is not configured yet.',
+    appTitle: 'Mobile app — coming soon',
+    appText: 'We’re building an ad-free mobile app that works offline at the machine — CNC-first (FANUC/HAAS, arcs, code ↔ toolpath sync) plus Bambu multi-plate .gcode.3mf.',
     faqTitle: 'About',
     faq1q: 'Is my file uploaded anywhere?', faq1a: 'No. The file is read and rendered by your browser. Nothing is sent to a server — you can even disconnect after the page loads.',
     faq2q: 'Which files work?', faq2a: 'G-code from slicers (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) and CAM/CNC programs (.nc, .ngc, .tap). Arcs (G2/G3), inch/mm, absolute/incremental and basic drill cycles are supported.',
@@ -35,7 +31,7 @@ const I18N = {
     err3mf: '.3mf / .gcode.3mf files are not supported yet — coming in the app. Export plain .gcode for now.',
   },
   tr: {
-    navNotify: 'Uygulamayı al', navNotifyShort: 'Uygulama', dzTitle: 'G-code dosyasını bırak', dzSub: '.gcode · .nc · .ngc · .tap · .gco',
+    soon: 'Yakında', dzTitle: 'G-code dosyasını bırak', dzSub: '.gcode · .nc · .ngc · .tap · .gco',
     pickFile: 'Dosya seç', trySample: 'ya da örnek dene:', samplePrint: '3D baskı', sampleCnc: 'CNC parça',
     privacy: 'Cihazında işlenir. Dosyan hiçbir yere yüklenmez.', loading: 'Dosya okunuyor…',
     viewTop: 'Üstten görünüm', viewFront: 'Önden görünüm', openOther: 'Başka dosya aç',
@@ -48,12 +44,8 @@ const I18N = {
     estNotePrint: '“kaba” değerler mesafe ve ilerleme hızından hesaplanır, ivmelenmeyi hesaba katmaz.',
     estNoteCnc: 'Süre kaba tahmindir: kesme hareketleri programlı F ile, hızlı hareketler 5000 mm/dk varsayımıyla, ivmelenme yok.',
     layer: 'Katman', of: '/', move: 'Hareket', line: 'satır',
-    notifyTitle: 'Telefon uygulaması ister misin?',
-    notifyText: 'Reklamsız, makine başında çevrimdışı çalışan bir mobil uygulama hazırlıyoruz — CNC öncelikli (FANUC/HAAS, yaylar, kod ↔ takım yolu senkronu) ve Bambu çok plakalı .gcode.3mf desteği. E-postanı bırak, çıktığında bir kez haber verelim.',
-    emailPh: 'sen@ornek.com', useQ: 'Kullanımım…', use3d: '3D yazıcı', useCnc: 'CNC', useBoth: 'İkisi de',
-    platQ: 'Telefonum…', notifyBtn: 'Haber ver', noSpam: 'Çıkışta tek e-posta. Spam yok, istediğin an çık.',
-    formOk: 'Teşekkürler! Listedesin.', formErr: 'Bir şeyler ters gitti. Tekrar dener misin?',
-    formOff: 'Kayıt formu henüz ayarlanmadı.',
+    appTitle: 'Mobil uygulama — yakında',
+    appText: 'Reklamsız, makine başında çevrimdışı çalışan bir mobil uygulama hazırlıyoruz — CNC öncelikli (FANUC/HAAS, yaylar, kod ↔ takım yolu senkronu) ve Bambu çok plakalı .gcode.3mf desteği.',
     faqTitle: 'Hakkında',
     faq1q: 'Dosyam bir yere yükleniyor mu?', faq1a: 'Hayır. Dosya tarayıcında okunur ve çizilir. Sunucuya hiçbir şey gönderilmez — sayfa açıldıktan sonra internet bağlantısını kesebilirsin.',
     faq2q: 'Hangi dosyalar çalışır?', faq2a: 'Dilimleyici çıktıları (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) ve CAM/CNC programları (.nc, .ngc, .tap). Yaylar (G2/G3), inç/mm, mutlak/artımlı ve temel delme çevrimleri desteklenir.',
@@ -294,28 +286,18 @@ document.querySelectorAll('[data-sample]').forEach((b) => b.addEventListener('cl
   } catch (err) { showError(t('errParse') + err.message); }
 }));
 
-// ---------------------------------------------------------------- notify form
-$('#notifyForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const form = e.target, msg = $('#formMsg');
-  if (!CFG.formEndpoint) { msg.textContent = t('formOff'); msg.className = 'form-msg err'; return; }
-  const fd = new FormData(form);
-  fd.append('lang', lang);
-  if (current) fd.append('lastFileType', current.mode);
-  const btn = form.querySelector('button');
-  btn.disabled = true;
-  try {
-    const res = await fetch(CFG.formEndpoint, { method: 'POST', body: fd, headers: { Accept: 'application/json' } });
-    if (!res.ok) throw new Error(res.status);
-    form.reset();
-    msg.textContent = t('formOk'); msg.className = 'form-msg ok';
-  } catch {
-    msg.textContent = t('formErr'); msg.className = 'form-msg err';
-  } finally { btn.disabled = false; }
-});
-
-// ---------------------------------------------------------------- analytics (cookie-free)
-if (CFG.cfAnalyticsToken) {
+// ---------------------------------------------------------------- analytics
+if (CFG.gaMeasurementId) {
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () { window.dataLayer.push(arguments); };
+  window.gtag('js', new Date());
+  window.gtag('config', CFG.gaMeasurementId);
+  const s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(CFG.gaMeasurementId);
+  document.head.appendChild(s);
+}
+if (CFG.cfAnalyticsToken) { // cookie-free
   const s = document.createElement('script');
   s.defer = true;
   s.src = 'https://static.cloudflareinsights.com/beacon.min.js';

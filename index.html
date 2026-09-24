@@ -27,7 +27,7 @@
         <button type="button" data-lang="en" aria-pressed="true">EN</button>
         <button type="button" data-lang="tr" aria-pressed="false">TR</button>
       </div>
-      <a class="btn btn-accent btn-sm nav-cta" href="#notify"><span class="long" data-i18n="navNotify">Get the app</span><span class="short" data-i18n="navNotifyShort">Get app</span></a>
+      <a class="soon-badge" href="#app"><span class="soon-os">iOS · Android</span><span class="soon-label" data-i18n="soon">Coming soon</span></a>
     </div>
   </header>
 
@@ -90,29 +90,13 @@
       <p class="muted small" id="estNote"></p>
     </section>
 
-    <section class="panel notify" id="notify">
-      <h2 data-i18n="notifyTitle">Want it as a phone app?</h2>
-      <p data-i18n="notifyText">We're building an ad-free mobile app that works offline at the machine — CNC-first (FANUC/HAAS, arcs, code ↔ toolpath sync) plus Bambu multi-plate .gcode.3mf. Leave your email and we'll tell you once, when it launches.</p>
-      <form id="notifyForm" class="notify-form">
-        <input type="email" name="email" required autocomplete="email" data-i18n-ph="emailPh" placeholder="you@example.com" aria-label="Email">
-        <div class="row">
-          <select name="use" aria-label="Use">
-            <option value="" data-i18n="useQ">I use…</option>
-            <option value="3d-printer" data-i18n="use3d">3D printer</option>
-            <option value="cnc" data-i18n="useCnc">CNC</option>
-            <option value="both" data-i18n="useBoth">Both</option>
-          </select>
-          <select name="platform" aria-label="Platform">
-            <option value="" data-i18n="platQ">My phone…</option>
-            <option value="android">Android</option>
-            <option value="ios">iPhone</option>
-          </select>
-        </div>
-        <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">
-        <button class="btn btn-accent" type="submit" data-i18n="notifyBtn">Notify me</button>
-        <p class="form-msg" id="formMsg" role="status"></p>
-      </form>
-      <p class="muted small" data-i18n="noSpam">One email at launch. No spam, unsubscribe anytime.</p>
+    <section class="panel app-soon" id="app">
+      <h2 data-i18n="appTitle">Mobile app — coming soon</h2>
+      <p data-i18n="appText">We’re building an ad-free mobile app that works offline at the machine — CNC-first (FANUC/HAAS, arcs, code ↔ toolpath sync) plus Bambu multi-plate .gcode.3mf.</p>
+      <div class="stores">
+        <span class="store"><span class="store-os">iOS</span><span class="store-soon" data-i18n="soon">Coming soon</span></span>
+        <span class="store"><span class="store-os">Android</span><span class="store-soon" data-i18n="soon">Coming soon</span></span>
+      </div>
     </section>
 
     <section class="panel faq">
@@ -131,8 +115,8 @@
   <script>
     // ---- Site config: fill these in, leave empty to disable ----
     window.GS_CONFIG = {
-      // Formspree (https://formspree.io) or any endpoint accepting a POST with FormData + "Accept: application/json"
-      formEndpoint: '',
+      // Google Analytics 4 measurement ID, e.g. 'G-XXXXXXXXXX'
+      gaMeasurementId: '',
       // Cloudflare Web Analytics token (dash.cloudflare.com → Analytics & Logs → Web Analytics)
       cfAnalyticsToken: ''
     };
