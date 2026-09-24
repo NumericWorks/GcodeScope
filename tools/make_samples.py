@@ -73,15 +73,19 @@ def cnc_sample():
     w('T1 M06 (10MM FLAT END MILL)'); w('S8000 M03'); w('G54'); w('G43 H01 Z25.'); w('M08')
     R = 8
     x0, y0, x1, y1 = -5, -5, 105, 75
-    w(f'G00 X{x0 - 5} Y{y0 + R}')
+    # lead-in: G41 line + tangent arc, lead-out: tangent arc + G40 line
+    w(f'G00 X{x0 - 15} Y{y0 + R - 5}')
     for z in (-3, -6, -9):
         w(f'G00 Z2.'); w(f'G01 Z{z}. F300')
-        w(f'G01 X{x0} Y{y0 + R} F1200')
+        w(f'G41 D01 G01 X{x0 - 5} Y{y0 + R - 5} F1200')
+        w(f'G03 X{x0} Y{y0 + R} I0. J5.')
         w(f'G01 Y{y1 - R}'); w(f'G02 X{x0 + R} Y{y1} I{R} J0.')
         w(f'G01 X{x1 - R}'); w(f'G02 X{x1} Y{y1 - R} I0. J-{R}.')
         w(f'G01 Y{y0 + R}'); w(f'G02 X{x1 - R} Y{y0} I-{R}. J0.')
         w(f'G01 X{x0 + R}'); w(f'G02 X{x0} Y{y0 + R} R{R}.')
-        w(f'G01 X{x0 - 5}')
+        w(f'G03 X{x0 - 5} Y{y0 + R + 5} I-5. J0.')
+        w(f'G40 G01 X{x0 - 15}')
+        w(f'G00 Y{y0 + R - 5}')
     w('G00 Z25.')
     # circular pocket with helical entry, R50 center 30,35 radius 15
     w('(CIRCULAR POCKET D30)')
