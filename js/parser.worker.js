@@ -7,6 +7,7 @@
  * (simplified), slicer metadata comments (Prusa/Orca/Bambu/Cura/S3D).
  */
 'use strict';
+importScripts('controller.js'); // self.GSController
 
 class FloatBuf {
   constructor(cap) { this.a = new Float32Array(cap || 65536); this.n = 0; }
@@ -588,6 +589,7 @@ function parse(text, name) {
   return {
     name,
     mode: isPrint ? 'print' : 'cnc',
+    controller: isPrint ? null : self.GSController.detect(text, name),
     inch,
     lines: lineNo,
     motionCount,
