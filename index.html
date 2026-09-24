@@ -3,12 +3,61 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>GcodeScope — Free G-code Viewer for CNC &amp; 3D Printing | NumericWorks</title>
+  <title>GcodeScope — Free Online G-code Viewer for CNC &amp; 3D Printing | NumericWorks</title>
   <meta name="description" content="Free, private G-code viewer in your browser. Drop a .gcode or .nc file to see the 3D toolpath, layers, rapids, size, print time and filament. Nothing is uploaded. Works on your phone.">
   <meta name="theme-color" content="#16181b">
-  <meta property="og:title" content="GcodeScope — Free G-code Viewer (CNC & 3D printing)">
-  <meta property="og:description" content="Drop a .gcode / .nc file and see the toolpath in 3D. Runs entirely in your browser — your file never leaves your device.">
+  <link rel="canonical" href="https://numericworks.github.io/GcodeScope/">
+  <link rel="alternate" hreflang="en" href="https://numericworks.github.io/GcodeScope/">
+  <link rel="alternate" hreflang="tr" href="https://numericworks.github.io/GcodeScope/tr/">
+  <link rel="alternate" hreflang="x-default" href="https://numericworks.github.io/GcodeScope/">
   <meta property="og:type" content="website">
+  <meta property="og:site_name" content="GcodeScope by NumericWorks">
+  <meta property="og:url" content="https://numericworks.github.io/GcodeScope/">
+  <meta property="og:title" content="GcodeScope — Free G-code Viewer (CNC &amp; 3D printing)">
+  <meta property="og:description" content="Drop a .gcode / .nc file and see the toolpath in 3D. Runs entirely in your browser — your file never leaves your device.">
+  <meta property="og:image" content="https://numericworks.github.io/GcodeScope/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="GcodeScope showing a 3D toolpath preview of a G-code file">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="tr_TR">
+  <meta name="twitter:card" content="summary_large_image">
+  <script>
+    // Visitors who explicitly picked Turkish get the Turkish page (crawlers have no stored choice).
+    try { if (localStorage.getItem('gs-lang') === 'tr') location.replace('tr/' + location.hash); } catch {}
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "GcodeScope",
+        "url": "https://numericworks.github.io/GcodeScope/",
+        "description": "Free, private G-code viewer that runs in your browser. Shows the 3D toolpath, layers, rapid moves, size, print time and filament for 3D printing and CNC files.",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Any (web browser)",
+        "browserRequirements": "Requires JavaScript and WebGL",
+        "inLanguage": ["en", "tr"],
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "image": "https://numericworks.github.io/GcodeScope/assets/og-image.png",
+        "publisher": { "@type": "Organization", "name": "NumericWorks" }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Is my file uploaded anywhere?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. The file is read and rendered by your browser. Nothing is sent to a server — you can even disconnect after the page loads." } },
+          { "@type": "Question", "name": "Which files work?",
+            "acceptedAnswer": { "@type": "Answer", "text": "G-code from slicers (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) and CAM/CNC programs (.nc, .ngc, .tap). Arcs (G2/G3), inch/mm, absolute/incremental and basic drill cycles are supported." } },
+          { "@type": "Question", "name": "How accurate is the time estimate?",
+            "acceptedAnswer": { "@type": "Answer", "text": "If the slicer wrote a time into the file, we show that. Otherwise we compute a rough value from distances and feed rates, ignoring acceleration — real jobs usually take longer." } }
+        ]
+      }
+    ]
+  }
+  </script>
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/style.css">
   <script type="importmap">
@@ -23,10 +72,10 @@
       <span class="brand-by">by NumericWorks</span>
     </a>
     <div class="topbar-actions">
-      <div class="lang-switch" role="group" aria-label="Language">
-        <button type="button" data-lang="en" aria-pressed="true">EN</button>
-        <button type="button" data-lang="tr" aria-pressed="false">TR</button>
-      </div>
+      <nav class="lang-switch" aria-label="Language">
+        <a href="./" hreflang="en" lang="en" data-lang="en" aria-current="page">EN</a>
+        <a href="tr/" hreflang="tr" lang="tr" data-lang="tr">TR</a>
+      </nav>
       <a class="soon-badge" href="#app"><span class="soon-os">iOS · Android</span><span class="soon-label" data-i18n="soon">Coming soon</span></a>
     </div>
   </header>
@@ -37,7 +86,8 @@
         <div class="dropzone" id="dropzone">
           <div class="dz-inner">
             <svg class="dz-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M8 34 L16 26 L22 30 L30 16 L40 22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="40" cy="22" r="3.5" fill="currentColor"/></svg>
-            <h1 data-i18n="dzTitle">Drop a G-code file</h1>
+            <h1 data-i18n="dzHeading">Free online G-code viewer</h1>
+            <p class="dz-cta" data-i18n="dzTitle">Drop a G-code file</p>
             <p class="muted" data-i18n="dzSub">.gcode · .nc · .ngc · .tap · .gco</p>
             <label class="btn btn-accent">
               <input type="file" id="fileInput" hidden>

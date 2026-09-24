@@ -12,7 +12,7 @@ NumericWorks'ün ücretsiz, tarayıcıda çalışan G-code görüntüleyicisi. T
 - CNC: hareket hareket oynatma, takım konisi, satır no + koordinat
 - Hızlı/boş hareket göster/gizle, 3D/XY/XZ görünümleri, oynat (1×/4×/16×/64×)
 - Özet: boyut (baskıda 1. katmandaki purge/skirt hariç), süre ve filament (dosyada varsa dilimleyici değeri, yoksa "kaba" hesap), dilimleyici, malzeme, F aralığı, takımlar
-- Arayüz varsayılan olarak İngilizce; üst bardaki EN | TR seçiciyle Türkçe (seçim tarayıcıda hatırlanır)
+- İki dil, iki ayrı statik sayfa: `/` (EN) ve `/tr/` (TR). EN | TR seçici bu sayfalara link verir; TR'yi seçen ziyaretçi kök sayfaya döndüğünde `/tr/`'ye yönlendirilir
 
 ## Yapılandırma (`index.html` en altı)
 ```js
@@ -23,6 +23,13 @@ window.GS_CONFIG = {
 - **Cloudflare Web Analytics:** token girilirse beacon yüklenir (çerezsiz, onay çubuğu gerekmez). Paneldeki site: `numericworks.github.io`. Özel olay saymaz; sadece sayfa görüntülemesi.
 - E-posta toplama yok; üst barda ve sayfada "iOS · Android — yakında" rozeti var.
 
+## SEO
+- `index.html` ve `tr/index.html` birbirini `hreflang` ile gösterir; canonical, Open Graph/Twitter etiketleri ve JSON-LD (`WebApplication` + `FAQPage`) içerir.
+- **`tr/index.html` elle düzenlenmez:** `index.html` ya da `js/app.js` içindeki TR metinleri değişince `python3 tools/make_tr_page.py` çalıştırılır.
+- `sitemap.xml` → Google Search Console ve Bing Webmaster Tools'a `https://numericworks.github.io/GcodeScope/sitemap.xml` olarak gönderilir. (`robots.txt` yalnızca alan adının kökünde geçerli olduğu için bu repoda yok.)
+- `assets/og-image.png` (1200×630) paylaşım önizlemesidir.
+- Kendi alan adına geçilirse `https://numericworks.github.io/GcodeScope/` adresini `index.html`, `tools/make_tr_page.py` ve `sitemap.xml` içinde değiştirin.
+
 ## Yerelde çalıştırma
 Module worker ve import map `file://` üzerinden çalışmaz, küçük bir sunucu gerekir:
 ```sh
@@ -31,7 +38,9 @@ npx http-server -p 8080   # veya: python3 -m http.server 8080
 
 ## Dosyalar
 ```
-index.html              sayfa + config
+index.html              sayfa + config (EN)
+tr/index.html           TR sayfası (tools/make_tr_page.py üretir)
+sitemap.xml             arama motorları için site haritası
 css/style.css           arayüz (mobil öncelikli)
 js/app.js               arayüz mantığı, i18n, analitik
 js/viewer.js            Three.js sahnesi (drawRange ile katman/ilerleme)

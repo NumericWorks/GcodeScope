@@ -46,12 +46,13 @@ h2 { font-size: 1.1rem; }
 .brand-by { color: var(--muted); font-size: .8rem; white-space: nowrap; }
 .topbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .lang-switch { display: flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-.lang-switch button {
-  min-width: 38px; min-height: 36px; padding: 0 8px; border: 0;
-  background: transparent; color: var(--muted); font: 600 .8rem/1 inherit; cursor: pointer;
+.lang-switch a {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 38px; min-height: 36px; padding: 0 8px;
+  color: var(--muted); font-weight: 600; font-size: .8rem; line-height: 1; text-decoration: none;
 }
-.lang-switch button[aria-pressed="true"] { background: var(--surface-2); color: var(--text); }
-.lang-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.lang-switch a[aria-current="page"] { background: var(--surface-2); color: var(--text); }
+.lang-switch a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .soon-badge {
   display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
   min-height: 36px; padding: 3px 10px; border-radius: 10px;
@@ -118,6 +119,7 @@ main {
 body.dragging .dropzone { border-color: var(--accent); background: rgba(255, 122, 26, .08); }
 .dropzone[hidden] { display: none; }
 .dz-inner { max-width: 420px; }
+.dz-cta { margin: 0 0 .25em; font-weight: 600; }
 .dz-icon { width: 56px; height: 56px; color: var(--accent); margin-bottom: 4px; }
 .samples { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; }
 .privacy { margin: 18px 0 0; font-size: .85rem; color: var(--ok); }
@@ -241,7 +243,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
   .brand-by { display: none; }
   .topbar { padding-left: 12px; padding-right: 12px; }
   .topbar-actions { gap: 6px; }
-  .lang-switch button { min-width: 32px; padding: 0 6px; }
+  .lang-switch a { min-width: 32px; padding: 0 6px; }
   .soon-badge { padding: 3px 8px; }
   .stats { grid-template-columns: 1fr 1fr; }
 }

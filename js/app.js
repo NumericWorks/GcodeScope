@@ -7,7 +7,7 @@ const $ = (s) => document.querySelector(s);
 // ---------------------------------------------------------------- i18n
 const I18N = {
   en: {
-    soon: 'Coming soon', dzTitle: 'Drop a G-code file', dzSub: '.gcode · .nc · .ngc · .tap · .gco',
+    soon: 'Coming soon', dzHeading: 'Free online G-code viewer', dzTitle: 'Drop a G-code file', dzSub: '.gcode · .nc · .ngc · .tap · .gco',
     pickFile: 'Choose file', trySample: 'or try a sample:', samplePrint: '3D print', sampleCnc: 'CNC part',
     privacy: 'Processed on your device. Your file is never uploaded.', loading: 'Reading file…',
     viewTop: 'Top view', viewFront: 'Front view', openOther: 'Open another file',
@@ -31,7 +31,7 @@ const I18N = {
     err3mf: '.3mf / .gcode.3mf files are not supported yet — coming in the app. Export plain .gcode for now.',
   },
   tr: {
-    soon: 'Yakında', dzTitle: 'G-code dosyasını bırak', dzSub: '.gcode · .nc · .ngc · .tap · .gco',
+    soon: 'Yakında', dzHeading: 'Ücretsiz online G-code görüntüleyici', dzTitle: 'G-code dosyasını bırak', dzSub: '.gcode · .nc · .ngc · .tap · .gco',
     pickFile: 'Dosya seç', trySample: 'ya da örnek dene:', samplePrint: '3D baskı', sampleCnc: 'CNC parça',
     privacy: 'Cihazında işlenir. Dosyan hiçbir yere yüklenmez.', loading: 'Dosya okunuyor…',
     viewTop: 'Üstten görünüm', viewFront: 'Önden görünüm', openOther: 'Başka dosya aç',
@@ -55,10 +55,9 @@ const I18N = {
     err3mf: '.3mf / .gcode.3mf henüz desteklenmiyor — uygulamada gelecek. Şimdilik düz .gcode dışa aktar.',
   },
 };
-let lang = (() => {
-  try { const s = localStorage.getItem('gs-lang'); if (s && I18N[s]) return s; } catch {}
-  return 'en'; // English by default; Turkish only when chosen in the top bar
-})();
+// Each language has its own static page (/ and /tr/) so search engines can index both;
+// the page's <html lang> decides the UI language.
+const lang = I18N[document.documentElement.lang] ? document.documentElement.lang : 'en';
 const t = (k) => I18N[lang][k] ?? I18N.en[k] ?? k;
 
 function applyLang() {
@@ -66,14 +65,11 @@ function applyLang() {
   document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
   document.querySelectorAll('[data-i18n-title]').forEach((el) => { el.title = t(el.dataset.i18nTitle); });
-  document.querySelectorAll('[data-lang]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
   if (current) { renderSummary(current); renderLegend(current); updateLabel(); }
 }
-document.querySelectorAll('[data-lang]').forEach((b) => b.addEventListener('click', () => {
-  if (b.dataset.lang === lang) return;
-  lang = b.dataset.lang;
-  try { localStorage.setItem('gs-lang', lang); } catch {}
-  applyLang();
+// Remember an explicit choice so the English page can forward returning Turkish visitors.
+document.querySelectorAll('[data-lang]').forEach((a) => a.addEventListener('click', () => {
+  try { localStorage.setItem('gs-lang', a.dataset.lang); } catch {}
 }));
 
 // ---------------------------------------------------------------- viewer
@@ -106,7 +102,7 @@ function openFile(file) {
   stopPlay();
   setLoading(true, 0);
   worker?.terminate();
-  worker = new Worker('js/parser.worker.js');
+  worker = new Worker(new URL('./parser.worker.js', import.meta.url));
   worker.onmessage = (ev) => {
     const m = ev.data;
     if (m.type === 'progress') setLoading(true, m.value);
