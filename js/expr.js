@@ -30,7 +30,11 @@
         throw new Error('bad token');
       }
       if (m[1] !== undefined) out.push({ n: parseFloat(m[1]) });
-      else if (m[2] !== undefined) out.push({ id: m[2].toUpperCase() });
+      else if (m[2] !== undefined) {
+        const id = m[2].toUpperCase(), fn = /^([A-Z_$][A-Z0-9_$]*)\[(\d+)\]$/.exec(id);
+        if (fn && FN[fn[1]]) out.push({ id: fn[1] }, { op: '[' }, { n: +fn[2] }, { op: ']' }); // SIN[30] is a call, not an array
+        else out.push({ id });
+      }
       else out.push({ op: m[3] });
     }
     return out;
@@ -72,23 +76,23 @@
       return a;
     }
     function mul() {
-      let a = pow();
+      let a = unary();
       while (isOp('*') || isOp('/') || isId('MOD') || isId('DIV')) {
-        const t = toks[i++], b = pow();
+        const t = toks[i++], b = unary();
         a = t.op === '*' ? a * b : t.op === '/' ? a / b : t.id === 'MOD' ? a % b : Math.trunc(a / b);
       }
-      return a;
-    }
-    function pow() {
-      const a = unary();
-      if (isOp('^') || isOp('**')) { i++; return Math.pow(a, pow()); }
       return a;
     }
     function unary() {
       if (isOp('-')) { i++; return -unary(); }
       if (isOp('+')) { i++; return unary(); }
       if (isId('NOT')) { i++; return +!unary(); }
-      return atom();
+      return pow();
+    }
+    function pow() { // binds tighter than a leading sign: -2^2 = -4
+      const a = atom();
+      if (isOp('^') || isOp('**')) { i++; return Math.pow(a, unary()); }
+      return a;
     }
     function atom() {
       const t = toks[i++];
