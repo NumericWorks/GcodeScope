@@ -16,6 +16,8 @@ const I18N = {
     sSize: 'Size (X × Y × Z)', sLayers: 'Layers', sLines: 'Lines', sMoves: 'Moves', sTime: 'Estimated time',
     sFilament: 'Filament', sSlicer: 'Slicer', sUnits: 'Units', sFeed: 'Feed range', sTools: 'Tools',
     sCutLen: 'Cutting length', sRapidLen: 'Rapid length', sMaterial: 'Material',
+    sControl: 'Controller', sCam: 'CAM', confHigh: 'detected', confMedium: 'likely', confLow: 'guess',
+    ctlEvidence: 'Detected from', ctlKlartext: 'Heidenhain Klartext (conversational) program',
     fromFile: 'from file', rough: 'rough', unitsIn: 'inch (shown in mm)', unitsMm: 'mm',
     estNotePrint: '“rough” values are computed from distances and feed rates and ignore acceleration.',
     estNoteCnc: 'Time is a rough estimate: feed moves at programmed F, rapids assumed at 5000 mm/min, no acceleration.',
@@ -40,6 +42,8 @@ const I18N = {
     sSize: 'Boyut (X × Y × Z)', sLayers: 'Katman', sLines: 'Satır', sMoves: 'Hareket', sTime: 'Tahmini süre',
     sFilament: 'Filament', sSlicer: 'Dilimleyici', sUnits: 'Birim', sFeed: 'İlerleme (F) aralığı', sTools: 'Takımlar',
     sCutLen: 'Kesme yolu', sRapidLen: 'Hızlı hareket yolu', sMaterial: 'Malzeme',
+    sControl: 'Kontrol ünitesi', sCam: 'CAM', confHigh: 'tespit', confMedium: 'muhtemel', confLow: 'tahmin',
+    ctlEvidence: 'Tespit kaynağı', ctlKlartext: 'Heidenhain Klartext (konuşmalı) program',
     fromFile: 'dosyadan', rough: 'kaba', unitsIn: 'inç (mm gösterilir)', unitsMm: 'mm',
     estNotePrint: '“kaba” değerler mesafe ve ilerleme hızından hesaplanır, ivmelenmeyi hesaba katmaz.',
     estNoteCnc: 'Süre kaba tahmindir: kesme hareketleri programlı F ile, hızlı hareketler 5000 mm/dk varsayımıyla, ivmelenme yok.',
@@ -110,7 +114,11 @@ function openFile(file) {
     else if (m.type === 'done') {
       worker.terminate(); worker = null;
       const r = m.result;
-      if (r.cutPos.length === 0 && r.rapidPos.length === 0) { showError(t('errEmpty')); return; }
+      if (r.cutPos.length === 0 && r.rapidPos.length === 0) {
+        const c = r.controller;
+        showError(c && c.dialect === 'klartext' ? `${t('ctlKlartext')} (${localModel(c.model)}). ${t('errEmpty')}` : t('errEmpty'));
+        return;
+      }
       r.fileSize = file.size;
       onLoaded(r);
     }
@@ -159,6 +167,11 @@ function fmtTime(s) {
   if (m) return `${m}${lang === 'tr' ? 'dk' : 'm'} ${sec}${lang === 'tr' ? 'sn' : 's'}`;
   return `${sec}${lang === 'tr' ? 'sn' : 's'}`;
 }
+// Controller model strings come from the parser in English; the few descriptive words get a Turkish form.
+const MODEL_TR = [[/ or newer/g, ' veya üstü'], [/Fanuc-compatible/g, 'Fanuc uyumlu'], [/classic cycles/g, 'klasik çevrimler'],
+  [/mill-turn/g, 'freze-torna'], [/programming/g, 'programlama'], [/program \(MAZATROL control\)/g, 'programı (MAZATROL kontrol)'],
+  [/tilted plane/g, 'eğik düzlem'], [/AI contour/g, 'AI kontur'], [/ class/g, ' sınıfı'], [/Classic/g, 'Klasik']];
+const localModel = (m) => (lang === 'tr' ? MODEL_TR.reduce((s, [re, v]) => s.replace(re, v), m) : m);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 function renderSummary(r) {
@@ -166,11 +179,21 @@ function renderSummary(r) {
   $('#fileName').textContent = r.name;
   $('#modePill').textContent = t(r.mode === 'print' ? 'modePrint' : 'modeCnc');
   $('#modePill').className = 'pill ' + r.mode;
+  const ctl = r.controller;
+  $('#ctlPill').hidden = !ctl;
+  if (ctl) $('#ctlPill').textContent = ctl.name;
   const rows = [];
   const tag = (k) => ` <small class="tag">${t(k)}</small>`;
   rows.push([t('sSize'), `${fmtNum(b.maxX - b.minX)} × ${fmtNum(b.maxY - b.minY)} × ${fmtNum(b.maxZ - b.minZ)} mm`]);
   const metaTime = r.meta.time;
   rows.push([t('sTime'), metaTime ? fmtTime(metaTime) + tag('fromFile') : fmtTime(r.estTime) + tag('rough')]);
+  if (ctl) {
+    const conf = { high: 'confHigh', medium: 'confMedium', low: 'confLow' }[ctl.confidence];
+    let v = esc(ctl.name) + (ctl.model ? `<br><span class="ctl-model">${esc(localModel(ctl.model))}</span>` : '');
+    v += ` <small class="tag">${[ctl.era, t(conf)].filter(Boolean).map(esc).join(' · ')}</small>`;
+    rows.push([t('sControl'), v, 'wide']);
+    if (ctl.cam) rows.push([t('sCam'), esc(ctl.cam)]);
+  }
   if (r.mode === 'print') {
     rows.push([t('sLayers'), fmtNum(r.layers, 0)]);
     let fil;
@@ -196,8 +219,11 @@ function renderSummary(r) {
   }
   rows.push([t('sLines'), fmtNum(r.lines, 0)]);
   rows.push([t('sMoves'), fmtNum(r.motionCount, 0)]);
-  $('#stats').innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+  $('#stats').innerHTML = rows.map(([k, v, cls]) => `<div${cls ? ` class="${cls}"` : ''}><dt>${k}</dt><dd>${v}</dd></div>`).join('');
   $('#estNote').textContent = t(r.mode === 'print' ? 'estNotePrint' : 'estNoteCnc');
+  const ev = $('#ctlEvidence');
+  ev.hidden = !(ctl && ctl.evidence.length);
+  if (!ev.hidden) ev.textContent = `${t('ctlEvidence')}: ${ctl.evidence.join(' · ')}`;
 }
 
 function updateLabel() {

@@ -12,6 +12,7 @@ NumericWorks'ün ücretsiz, tarayıcıda çalışan G-code görüntüleyicisi. T
 - CNC: hareket hareket oynatma, takım konisi, satır no + koordinat
 - Hızlı/boş hareket göster/gizle, 3D/XY/XZ görünümleri, oynat (1×/4×/16×/64×)
 - Özet: boyut (baskıda 1. katmandaki purge/skirt hariç), süre ve filament (dosyada varsa dilimleyici değeri, yoksa "kaba" hesap), dilimleyici, malzeme, F aralığı, takımlar
+- **Kontrol ünitesi tespiti (CNC):** HEIDENHAIN (Klartext / DIN-ISO), Siemens SINUMERIK, FANUC, Mazak, Mitsubishi, Kitamura, Okuma, Haas, Brother, Fagor, DN Solutions, Hurco, DMG MORI, LinuxCNC, Mach, GRBL. Özette marka + nesil/versiyon (ör. "iTNC 530 veya üstü · 2004+", "840D sl / 828D (Operate)", "Series 0i-MF · 2015+"), güven seviyesi (tespit / muhtemel / tahmin), neye bakılarak bulunduğu ve varsa CAM yazılımı gösterilir. İki kaynak birleştirilir: yalnızca o kontrolün anladığı sözdizimi (`BEGIN PGM`, `CYCLE81(`, `G15 H1`, `#MSG`, `G187`…) ve post-processor'ın başlık yorumlarına yazdığı makine/kontrol adı. Fanuc uyumlu ISO kontroller (Fanuc/Mitsubishi/Mazak EIA/Kitamura) sözdiziminden ayırt edilemediği için başlık yoksa "Fanuc uyumlu" denir; versiyon, o nesilde gelen özelliklerden (G05.1 Q1, G43.4, G68.2, PLANE SPATIAL, CYCLE832 `_ORI_`…) çıkarılır.
 - İki dil, iki ayrı statik sayfa: `/` (EN) ve `/tr/` (TR). EN | TR seçici bu sayfalara link verir; TR'yi seçen ziyaretçi kök sayfaya döndüğünde `/tr/`'ye yönlendirilir
 
 ## Yapılandırma (`index.html` en altı)
@@ -30,6 +31,11 @@ window.GS_CONFIG = {
 - `assets/og-image.png` (1200×630) paylaşım önizlemesidir.
 - Kendi alan adına geçilirse `https://numericworks.github.io/GcodeScope/` adresini `index.html`, `tools/make_tr_page.py` ve `sitemap.xml` içinde değiştirin.
 
+## Test
+```sh
+node tests/run.js
+```
+
 ## Yerelde çalıştırma
 Module worker ve import map `file://` üzerinden çalışmaz, küçük bir sunucu gerekir:
 ```sh
@@ -45,6 +51,8 @@ css/style.css           arayüz (mobil öncelikli)
 js/app.js               arayüz mantığı, i18n, analitik
 js/viewer.js            Three.js sahnesi (drawRange ile katman/ilerleme)
 js/parser.worker.js     G-code ayrıştırıcı (Web Worker)
+js/controller.js        kontrol ünitesi / versiyon tespiti (worker'a importScripts ile yüklenir)
+tests/                  node tests/run.js — ayrıştırıcı testleri (bağımlılık yok), fixtures/ örnek programlar
 vendor/                 three.js r170 (MIT)
 samples/                demo dosyalar (tools/make_samples.py ile üretilir)
 assets/icon.svg         geçici ikon — Canva logosuyla değiştirilecek
