@@ -101,12 +101,29 @@ def cnc_sample():
     w('G00 X60. Y20.'); w('G00 Z2.'); w('G01 Z-2. F300')
     w('G01 X80. F1000'); w('G03 X80. Y50. R15.'); w('G01 X60.'); w('G03 X60. Y20. R15.')
     w('G00 Z25.'); w('M09'); w('M05')
-    # T2 drilling
+    # T3 spot drill, T2 peck drill, T4 tap, T1 bore milling
+    w('T3 M06 (SPOT DRILL D10 90DEG)'); w('S3000 M03'); w('G43 H03 Z25.'); w('M08')
+    w('G00 X5. Y5.')
+    w('G99 G81 X5. Y5. Z-1.5 R2. F150')
+    w('X95.'); w('Y65.'); w('X5.')
+    w('G80'); w('G00 Z25.')
     w('T2 M06 (6.8MM DRILL)'); w('S3500 M03'); w('G43 H02 Z25.'); w('M08')
     w('G00 X5. Y5.')
-    w('G98 G81 X5. Y5. Z-14. R2. F250')
+    w('G98 G83 X5. Y5. Z-14. R2. Q4. F250')
     w('X95.'); w('Y65.'); w('X5.')
-    w('G80'); w('G00 Z50.'); w('M09'); w('M05')
+    w('G80'); w('G00 Z25.')
+    w('T4 M06 (TAP M8X1.25)'); w('S400 M03'); w('G43 H04 Z25.')
+    w('M29 S400')
+    w('G99 G84 X95. Y5. Z-12. R5. F500')
+    w('Y65.')
+    w('G80'); w('G00 Z25.')
+    w('T1 M06 (10MM FLAT END MILL)'); w('S8000 M03'); w('G43 H01 Z25.')
+    w('(BORE MILLING D16)')
+    w('G00 X45. Y60.'); w('G00 Z2.'); w('G01 Z0. F300'); w('G01 X48. F800')
+    for i in range(1, 5):
+        w(f'G03 X48. Y60. Z-{i * 2}. I-3. J0.')
+    w('G03 X48. Y60. I-3. J0.'); w('G01 X45.')
+    w('G00 Z50.'); w('M09'); w('M05')
     w('G28 G91 Z0.'); w('G90'); w('M30'); w('%')
     return '\n'.join(L) + '\n'
 
