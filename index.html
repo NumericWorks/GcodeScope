@@ -50,7 +50,7 @@
           { "@type": "Question", "name": "Is my file uploaded anywhere?",
             "acceptedAnswer": { "@type": "Answer", "text": "No. The file is read and rendered by your browser. Nothing is sent to a server — you can even disconnect after the page loads." } },
           { "@type": "Question", "name": "Which files work?",
-            "acceptedAnswer": { "@type": "Answer", "text": "G-code from slicers (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) and CAM/CNC programs (.nc, .ngc, .tap). Arcs (G2/G3), inch/mm, absolute/incremental and basic drill cycles are supported." } },
+            "acceptedAnswer": { "@type": "Answer", "text": "G-code from slicers (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) and CNC programs for FANUC, HEIDENHAIN (Klartext and ISO), Siemens SINUMERIK, Mazak, Mitsubishi, Kitamura, Okuma, Haas, Fagor and other ISO controls (.nc, .ngc, .tap, .h, .mpf…). Arcs, drilling / tapping / boring cycles, subprograms, macro variables and coordinate shifts/rotations are supported; tilted planes and pocket cycles are listed but not drawn." } },
           { "@type": "Question", "name": "How accurate is the time estimate?",
             "acceptedAnswer": { "@type": "Answer", "text": "If the slicer wrote a time into the file, we show that. Otherwise we compute a rough value from distances and feed rates, ignoring acceleration — real jobs usually take longer." } }
         ]
@@ -88,7 +88,7 @@
             <svg class="dz-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M8 34 L16 26 L22 30 L30 16 L40 22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="40" cy="22" r="3.5" fill="currentColor"/></svg>
             <h1 data-i18n="dzHeading">Free online G-code viewer</h1>
             <p class="dz-cta" data-i18n="dzTitle">Drop a G-code file</p>
-            <p class="muted" data-i18n="dzSub">.gcode · .nc · .ngc · .tap · .gco</p>
+            <p class="muted" data-i18n="dzSub">.gcode · .nc · .ngc · .tap · .h · .mpf</p>
             <label class="btn btn-accent">
               <input type="file" id="fileInput" hidden>
               <span data-i18n="pickFile">Choose file</span>
@@ -97,6 +97,8 @@
               <span class="muted" data-i18n="trySample">or try a sample:</span>
               <button class="btn btn-ghost btn-sm" type="button" data-sample="samples/sample-print.gcode" data-i18n="samplePrint">3D print</button>
               <button class="btn btn-ghost btn-sm" type="button" data-sample="samples/sample-cnc.nc" data-i18n="sampleCnc">CNC part</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-sample="samples/sample-heidenhain.h" data-i18n="sampleHeidenhain">HEIDENHAIN</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-sample="samples/sample-sinumerik.mpf" data-i18n="sampleSiemens">SINUMERIK</button>
             </div>
             <p class="privacy"><span aria-hidden="true">🔒</span> <span data-i18n="privacy">Processed on your device. Your file is never uploaded.</span></p>
           </div>
@@ -154,7 +156,7 @@
     <section class="panel faq">
       <h2 data-i18n="faqTitle">About</h2>
       <details><summary data-i18n="faq1q">Is my file uploaded anywhere?</summary><p data-i18n="faq1a">No. The file is read and rendered by your browser. Nothing is sent to a server — you can even disconnect after the page loads.</p></details>
-      <details><summary data-i18n="faq2q">Which files work?</summary><p data-i18n="faq2a">G-code from slicers (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) and CAM/CNC programs (.nc, .ngc, .tap). Arcs (G2/G3), inch/mm, absolute/incremental and basic drill cycles are supported.</p></details>
+      <details><summary data-i18n="faq2q">Which files work?</summary><p data-i18n="faq2a">G-code from slicers (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) and CNC programs for FANUC, HEIDENHAIN (Klartext and ISO), Siemens SINUMERIK, Mazak, Mitsubishi, Kitamura, Okuma, Haas, Fagor and other ISO controls (.nc, .ngc, .tap, .h, .mpf…). Arcs, drilling / tapping / boring cycles, subprograms, macro variables and coordinate shifts/rotations are supported; tilted planes and pocket cycles are listed but not drawn.</p></details>
       <details><summary data-i18n="faq3q">How accurate is the time estimate?</summary><p data-i18n="faq3a">If the slicer wrote a time into the file, we show that. Otherwise we compute a rough value from distances and feed rates, ignoring acceleration — real jobs usually take longer.</p></details>
     </section>
   </main>

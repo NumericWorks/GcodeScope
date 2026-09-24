@@ -64,7 +64,7 @@
             "name": "Hangi dosyalar çalışır?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Dilimleyici çıktıları (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) ve CAM/CNC programları (.nc, .ngc, .tap). Yaylar (G2/G3), inç/mm, mutlak/artımlı ve temel delme çevrimleri desteklenir."
+              "text": "Dilimleyici çıktıları (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) ve FANUC, HEIDENHAIN (Klartext ve ISO), Siemens SINUMERIK, Mazak, Mitsubishi, Kitamura, Okuma, Haas, Fagor ve diğer ISO kontroller için CNC programları (.nc, .ngc, .tap, .h, .mpf…). Yaylar, delme / kılavuz / bara çevrimleri, alt programlar, makro değişkenleri ve sıfır kaydırma/döndürme desteklenir; eğik düzlemler ve cep çevrimleri listelenir ama çizilmez."
             }
           },
           {
@@ -110,7 +110,7 @@
             <svg class="dz-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M8 34 L16 26 L22 30 L30 16 L40 22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="40" cy="22" r="3.5" fill="currentColor"/></svg>
             <h1 data-i18n="dzHeading">Ücretsiz online G-code görüntüleyici</h1>
             <p class="dz-cta" data-i18n="dzTitle">G-code dosyasını bırak</p>
-            <p class="muted" data-i18n="dzSub">.gcode · .nc · .ngc · .tap · .gco</p>
+            <p class="muted" data-i18n="dzSub">.gcode · .nc · .ngc · .tap · .h · .mpf</p>
             <label class="btn btn-accent">
               <input type="file" id="fileInput" hidden>
               <span data-i18n="pickFile">Dosya seç</span>
@@ -119,6 +119,8 @@
               <span class="muted" data-i18n="trySample">ya da örnek dene:</span>
               <button class="btn btn-ghost btn-sm" type="button" data-sample="../samples/sample-print.gcode" data-i18n="samplePrint">3D baskı</button>
               <button class="btn btn-ghost btn-sm" type="button" data-sample="../samples/sample-cnc.nc" data-i18n="sampleCnc">CNC parça</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-sample="../samples/sample-heidenhain.h" data-i18n="sampleHeidenhain">HEIDENHAIN</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-sample="../samples/sample-sinumerik.mpf" data-i18n="sampleSiemens">SINUMERIK</button>
             </div>
             <p class="privacy"><span aria-hidden="true">🔒</span> <span data-i18n="privacy">Cihazında işlenir. Dosyan hiçbir yere yüklenmez.</span></p>
           </div>
@@ -176,7 +178,7 @@
     <section class="panel faq">
       <h2 data-i18n="faqTitle">Hakkında</h2>
       <details><summary data-i18n="faq1q">Dosyam bir yere yükleniyor mu?</summary><p data-i18n="faq1a">Hayır. Dosya tarayıcında okunur ve çizilir. Sunucuya hiçbir şey gönderilmez — sayfa açıldıktan sonra internet bağlantısını kesebilirsin.</p></details>
-      <details><summary data-i18n="faq2q">Hangi dosyalar çalışır?</summary><p data-i18n="faq2a">Dilimleyici çıktıları (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) ve CAM/CNC programları (.nc, .ngc, .tap). Yaylar (G2/G3), inç/mm, mutlak/artımlı ve temel delme çevrimleri desteklenir.</p></details>
+      <details><summary data-i18n="faq2q">Hangi dosyalar çalışır?</summary><p data-i18n="faq2a">Dilimleyici çıktıları (PrusaSlicer, OrcaSlicer, Bambu Studio, Cura…) ve FANUC, HEIDENHAIN (Klartext ve ISO), Siemens SINUMERIK, Mazak, Mitsubishi, Kitamura, Okuma, Haas, Fagor ve diğer ISO kontroller için CNC programları (.nc, .ngc, .tap, .h, .mpf…). Yaylar, delme / kılavuz / bara çevrimleri, alt programlar, makro değişkenleri ve sıfır kaydırma/döndürme desteklenir; eğik düzlemler ve cep çevrimleri listelenir ama çizilmez.</p></details>
       <details><summary data-i18n="faq3q">Süre tahmini ne kadar doğru?</summary><p data-i18n="faq3a">Dilimleyici dosyaya süre yazdıysa onu gösteririz. Yoksa mesafe ve ilerleme hızından kaba bir değer hesaplarız; ivmelenme hesaba katılmaz, gerçek iş genelde daha uzun sürer.</p></details>
     </section>
   </main>

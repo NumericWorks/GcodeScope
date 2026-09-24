@@ -149,7 +149,7 @@
     let family, dialect, confidence;
     if (syntax) {
       family = syntax === 'heidenhainIso' ? 'heidenhain' : syntax === 'fagor8055' ? 'fagor' : syntax;
-      dialect = syntax === 'heidenhainIso' ? 'iso' : syntax === 'fagor8055' ? 'fagor' : DIALECT[family] || 'iso';
+      dialect = syntax === 'heidenhainIso' ? 'heidenhainIso' : syntax === 'fagor8055' ? 'fagor' : DIALECT[family] || 'iso';
       confidence = named === family || !named ? 'high' : 'medium';
     } else if (named) {
       family = named;
@@ -194,7 +194,7 @@
     if (named) return { model: named, era: eraOf(family, named) };
     switch (family) {
       case 'heidenhain': {
-        if (dialect === 'iso') return { model: 'TNC (DIN/ISO programming)', era: null };
+        if (dialect === 'heidenhainIso') return { model: 'TNC (DIN/ISO programming)', era: null };
         if (has(src, /\bFUNCTION\s+MODE\s+TURN\b|\bCYCL DEF 8\d\d\b/)) return { model: 'TNC 640 / TNC7 (mill-turn)', era: '2012+' };
         if (has(src, /\bFUNCTION\s+(?:PROG PATH|LIFTOFF|S-PULSE|DWELL|CORRDATA|FEED DWELL|POLARKIN|COUNT|SPINDLE)\b|\bCYCL DEF (?:23[89]|12\d\d)\b/))
           return { model: 'TNC 620 / TNC 640 / TNC7', era: '2011+' };
