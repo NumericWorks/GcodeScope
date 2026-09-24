@@ -1,5 +1,5 @@
 // GcodeScope — UI glue
-import { Viewer } from './viewer.js';
+import { Viewer, KIND_COLORS, RAPID_COLOR } from './viewer.js';
 
 const CFG = window.GS_CONFIG || {};
 const $ = (s) => document.querySelector(s);
@@ -20,6 +20,7 @@ const I18N = {
     estNotePrint: '“rough” values are computed from distances and feed rates and ignore acceleration.',
     estNoteCnc: 'Time is a rough estimate: feed moves at programmed F, rapids assumed at 5000 mm/min, no acceleration.',
     layer: 'Layer', of: 'of', move: 'Move', line: 'line',
+    kRapid: 'Rapid', kCut: 'Feed', kPlunge: 'Plunge', kRamp: 'Ramp / helix', kRetract: 'Feed retract', kLeadIn: 'Lead-in', kLeadOut: 'Lead-out',
     appTitle: 'Mobile app — coming soon',
     appText: 'We’re building an ad-free mobile app that works offline at the machine — CNC-first (FANUC/HAAS, arcs, code ↔ toolpath sync) plus Bambu multi-plate .gcode.3mf.',
     faqTitle: 'About',
@@ -44,6 +45,7 @@ const I18N = {
     estNotePrint: '“kaba” değerler mesafe ve ilerleme hızından hesaplanır, ivmelenmeyi hesaba katmaz.',
     estNoteCnc: 'Süre kaba tahmindir: kesme hareketleri programlı F ile, hızlı hareketler 5000 mm/dk varsayımıyla, ivmelenme yok.',
     layer: 'Katman', of: '/', move: 'Hareket', line: 'satır',
+    kRapid: 'Hızlı', kCut: 'Kesme', kPlunge: 'Dalma', kRamp: 'Rampa / helis', kRetract: 'Geri çekme', kLeadIn: 'Giriş', kLeadOut: 'Çıkış',
     appTitle: 'Mobil uygulama — yakında',
     appText: 'Reklamsız, makine başında çevrimdışı çalışan bir mobil uygulama hazırlıyoruz — CNC öncelikli (FANUC/HAAS, yaylar, kod ↔ takım yolu senkronu) ve Bambu çok plakalı .gcode.3mf desteği.',
     faqTitle: 'Hakkında',
@@ -146,7 +148,18 @@ function renderLegend(r) {
   el.hidden = false;
   el.innerHTML = r.mode === 'print'
     ? `<span><i style="background:#9fb9ca"></i>${lang === 'tr' ? 'Ekstrüzyon' : 'Extrusion'}</span><span><i style="background:#ff7a1a"></i>${lang === 'tr' ? 'Bu katman' : 'Current'}</span>`
-    : `<span><i style="background:#4fc3f7"></i>G1/G2/G3</span><span><i style="background:#ff4d4f"></i>G0</span>`;
+    : cncLegend(r);
+}
+
+const KIND_KEYS = ['kCut', 'kPlunge', 'kRamp', 'kRetract', 'kLeadIn', 'kLeadOut'];
+const hex = (c) => '#' + c.toString(16).padStart(6, '0');
+function cncLegend(r) {
+  // only the move types this program actually contains
+  const items = [`<span><i class="dash" style="--c:${hex(RAPID_COLOR)}"></i>${t('kRapid')} G0</span>`];
+  KIND_KEYS.forEach((k, i) => {
+    if (r.kindCounts[i] > 0) items.push(`<span><i style="background:${hex(KIND_COLORS[i])}"></i>${t(k)}${i === 0 ? ' G1/G2/G3' : ''}</span>`);
+  });
+  return items.join('');
 }
 
 // ---------------------------------------------------------------- summary
@@ -209,7 +222,10 @@ function updateLabel() {
     $('#stepLabel').textContent = `${t('layer')} ${fmtNum(i + 1, 0)} ${t('of')} ${fmtNum(n, 0)} · Z ${fmtNum(layerZ(r, i), 2)} mm`;
   } else {
     const x = r.stepPos[i * 3], y = r.stepPos[i * 3 + 1];
-    $('#stepLabel').textContent = `${t('move')} ${fmtNum(i + 1, 0)} ${t('of')} ${fmtNum(n, 0)} · ${t('line')} ${fmtNum(r.stepLine[i], 0)} · X${fmtNum(x, 3)} Y${fmtNum(y, 3)} Z${fmtNum(z, 3)}`;
+    // what the current block does: kind of its last feed segment, or rapid
+    const c1 = r.stepCut[i], c0 = i > 0 ? r.stepCut[i - 1] : 0;
+    const kind = c1 > c0 ? t(KIND_KEYS[r.cutKind[c1 - 1]]) : r.stepRapid[i] > (i > 0 ? r.stepRapid[i - 1] : 0) ? t('kRapid') : '';
+    $('#stepLabel').textContent = `${t('move')} ${fmtNum(i + 1, 0)} ${t('of')} ${fmtNum(n, 0)} · ${t('line')} ${fmtNum(r.stepLine[i], 0)}${kind ? ' · ' + kind : ''} · X${fmtNum(x, 3)} Y${fmtNum(y, 3)} Z${fmtNum(z, 3)}`;
   }
 }
 function layerZ(r, i) {

@@ -8,10 +8,23 @@ const COLORS = {
   rapid: 0xff4d4f,
   travel: 0x5c6470,
   cnc: 0x4fc3f7,
-  current: 0xff7a1a,
+  current: 0xff7a1a, cncCurrent: 0xffffff,
   tool: 0xff7a1a,
   lowZ: new THREE.Color(0x3d6f8e), highZ: new THREE.Color(0xd8e4ec),
 };
+
+// CNC move colors, indexed by the parser's K_* segment kind. Follows the convention CAM
+// simulators share: red dashed rapids, blue feed, warm colors for moves into the material,
+// green lead-in, magenta lead-out, grey feed retract.
+export const KIND_COLORS = [
+  0x4fc3f7, // K_CUT      feed / cutting (G1 G2 G3)
+  0xff9f1a, // K_PLUNGE   vertical feed into material
+  0xffd23f, // K_RAMP     ramp / helical entry
+  0x9aa5b1, // K_RETRACT  feed move out of the material
+  0x3ddc84, // K_LEADIN   lead-in (G41/G42 approach or CAM entry arc)
+  0xe056fd, // K_LEADOUT  lead-out (G40 departure or CAM exit arc)
+];
+export const RAPID_COLOR = COLORS.rapid;
 
 export class Viewer {
   constructor(container) {
@@ -106,7 +119,17 @@ export class Viewer {
       cutGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
       cutMat = new THREE.LineBasicMaterial({ vertexColors: true });
     } else {
-      cutMat = new THREE.LineBasicMaterial({ color: COLORS.cnc });
+      const nSeg = d.cutKind.length;
+      const col = new Float32Array(nSeg * 6);
+      const pal = KIND_COLORS.map((h) => new THREE.Color(h));
+      for (let i = 0; i < nSeg; i++) {
+        const c = pal[d.cutKind[i]] || pal[0];
+        col[i * 6] = col[i * 6 + 3] = c.r;
+        col[i * 6 + 1] = col[i * 6 + 4] = c.g;
+        col[i * 6 + 2] = col[i * 6 + 5] = c.b;
+      }
+      cutGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      cutMat = new THREE.LineBasicMaterial({ vertexColors: true });
     }
     this.cutLines = new THREE.LineSegments(cutGeo, cutMat);
     this.cutLines.frustumCulled = false;
@@ -115,7 +138,7 @@ export class Viewer {
     // current layer highlight (shares the position buffer)
     const curGeo = new THREE.BufferGeometry();
     curGeo.setAttribute('position', posAttr);
-    this.curLines = new THREE.LineSegments(curGeo, new THREE.LineBasicMaterial({ color: COLORS.current }));
+    this.curLines = new THREE.LineSegments(curGeo, new THREE.LineBasicMaterial({ color: d.mode === 'print' ? COLORS.current : COLORS.cncCurrent }));
     this.curLines.frustumCulled = false;
     this.curLines.renderOrder = 2;
     this.paths.add(this.curLines);
@@ -123,10 +146,10 @@ export class Viewer {
     // --- rapids / travel
     const rGeo = new THREE.BufferGeometry();
     rGeo.setAttribute('position', new THREE.BufferAttribute(d.rapidPos, 3));
-    this.rapidLines = new THREE.LineSegments(rGeo, new THREE.LineBasicMaterial({
-      color: d.mode === 'print' ? COLORS.travel : COLORS.rapid,
-      transparent: true, opacity: d.mode === 'print' ? 0.35 : 0.6,
-    }));
+    this.rapidLines = new THREE.LineSegments(rGeo, d.mode === 'print'
+      ? new THREE.LineBasicMaterial({ color: COLORS.travel, transparent: true, opacity: 0.35 })
+      : new THREE.LineDashedMaterial({ color: COLORS.rapid, transparent: true, opacity: 0.75, dashSize: size / 120, gapSize: size / 160 }));
+    if (d.mode !== 'print') this.rapidLines.computeLineDistances();
     this.rapidLines.frustumCulled = false;
     this.paths.add(this.rapidLines);
 

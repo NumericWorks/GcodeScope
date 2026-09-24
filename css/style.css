@@ -159,6 +159,7 @@ body.dragging .dropzone { border-color: var(--accent); background: rgba(255, 122
 }
 .legend[hidden] { display: none; }
 .legend i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+.legend i.dash { background: repeating-linear-gradient(90deg, var(--c) 0 3px, transparent 3px 5px); }
 
 /* ------------------------------------------------------------ controls */
 .controls { padding: 12px 14px 14px; border-top: 1px solid var(--border); }

@@ -12,6 +12,7 @@ NumericWorks'ün ücretsiz, tarayıcıda çalışan G-code görüntüleyicisi. T
 - CNC: hareket hareket oynatma, takım konisi, satır no + koordinat
 - Hızlı/boş hareket göster/gizle, 3D/XY/XZ görünümleri, oynat (1×/4×/16×/64×)
 - Özet: boyut (baskıda 1. katmandaki purge/skirt hariç), süre ve filament (dosyada varsa dilimleyici değeri, yoksa "kaba" hesap), dilimleyici, malzeme, F aralığı, takımlar
+- **Hareket renkleri (CNC):** CAM simülatörlerinin ortak kuralına göre — hızlı (G0) kırmızı kesikli, kesme (G1/G2/G3) mavi, dalma turuncu, rampa/helis giriş sarı, ilerlemeyle geri çekme gri, giriş (lead-in) yeşil, çıkış (lead-out) mor. Giriş/çıkış önce takım telafisinden okunur (G41/G42 açıldığı hareket + ardından gelen teğet yay = giriş, G40 hareketi + öncesindeki teğet yay = çıkış); telafi yoksa malzemeye girişten hemen sonraki / çıkıştan hemen önceki kısa teğet yay (+ çizgi) aranır ve yalnızca kontur o noktada kapanıyorsa kabul edilir (köşe radyüsleri giriş sayılmaz). Lejant yalnızca dosyada bulunan hareket türlerini gösterir; alt satırda o anki hareketin türü yazar.
 - İki dil, iki ayrı statik sayfa: `/` (EN) ve `/tr/` (TR). EN | TR seçici bu sayfalara link verir; TR'yi seçen ziyaretçi kök sayfaya döndüğünde `/tr/`'ye yönlendirilir
 
 ## Yapılandırma (`index.html` en altı)
@@ -30,6 +31,11 @@ window.GS_CONFIG = {
 - `assets/og-image.png` (1200×630) paylaşım önizlemesidir.
 - Kendi alan adına geçilirse `https://numericworks.github.io/GcodeScope/` adresini `index.html`, `tools/make_tr_page.py` ve `sitemap.xml` içinde değiştirin.
 
+## Test
+```sh
+node tests/run.js
+```
+
 ## Yerelde çalıştırma
 Module worker ve import map `file://` üzerinden çalışmaz, küçük bir sunucu gerekir:
 ```sh
@@ -45,6 +51,7 @@ css/style.css           arayüz (mobil öncelikli)
 js/app.js               arayüz mantığı, i18n, analitik
 js/viewer.js            Three.js sahnesi (drawRange ile katman/ilerleme)
 js/parser.worker.js     G-code ayrıştırıcı (Web Worker)
+tests/                  node tests/run.js — ayrıştırıcı testleri (bağımlılık yok), fixtures/ örnek programlar
 vendor/                 three.js r170 (MIT)
 samples/                demo dosyalar (tools/make_samples.py ile üretilir)
 assets/icon.svg         geçici ikon — Canva logosuyla değiştirilecek
